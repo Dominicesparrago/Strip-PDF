@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strip-print-studio"
+version = "0.1.0"
+description = "Offline-first Windows photobooth strip layout and PDF print studio"
+requires-python = ">=3.11"
+dependencies = [
+  "Pillow>=10.4,<13",
+  "pywebview>=5.4,<7",
+  "reportlab>=4.2,<5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9", "pyinstaller>=6.10,<7"]
+
+[project.scripts]
+strip-print-studio = "app.main:main"
+
+[tool.setuptools]
+packages = ["app", "app.backend"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,11 @@
+.venv/
+.venv-win/
+.runtime-data/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.spec
+exports/
+projects/

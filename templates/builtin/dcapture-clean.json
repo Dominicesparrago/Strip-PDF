@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "dcapture-clean",
+  "name": "DCapture Clean",
+  "builtin": true,
+  "description": "Four photo areas on the original DCapture 3:4 warm off-white result body, with text and user imagery excluded.",
+  "source": {
+    "project": "../DCapture-Photobooth",
+    "renderer": "src/renderer/index.tsx:createSheet",
+    "logicalWidth": 1200,
+    "logicalHeight": 1600,
+    "background": "#f6f3eb",
+    "gap": 18,
+    "physicalDimensionsAuthoritative": false
+  },
+  "slotsPerStrip": 4,
+  "physical": {
+    "widthMm": 54,
+    "heightMm": 72,
+    "assumption": "Configurable 3:4 physical default; DCapture specifies only a 1200x1600 raster, not millimeters."
+  },
+  "design": {
+    "schemaVersion": 1,
+    "templateId": "dcapture-clean",
+    "artboard": { "width": 1200, "height": 1600, "widthMm": 54, "heightMm": 72 },
+    "pattern": { "type": "none", "scale": 1, "spacing": 18, "opacity": 0, "color": "#f6f3eb", "offsetX": 0, "offsetY": 0 },
+    "snap": true,
+    "elements": [
+      { "id": "background", "type": "background", "x": 0, "y": 0, "width": 1200, "height": 1600, "fill": "#f6f3eb", "opacity": 1, "visible": true, "locked": false },
+      { "id": "photo-1", "type": "image_frame", "x": 18, "y": 18, "width": 1164, "height": 377.5, "fill": "#ffffff", "borderColor": "#00000000", "borderWidth": 0, "borderRadius": 0, "opacity": 1, "padding": 0, "visible": true, "locked": false, "aspectRatio": "original", "cropMode": "cover", "slotIndex": 0 },
+      { "id": "photo-2", "type": "image_frame", "x": 18, "y": 413.5, "width": 1164, "height": 377.5, "fill": "#ffffff", "borderColor": "#00000000", "borderWidth": 0, "borderRadius": 0, "opacity": 1, "padding": 0, "visible": true, "locked": false, "aspectRatio": "original", "cropMode": "cover", "slotIndex": 1 },
+      { "id": "photo-3", "type": "image_frame", "x": 18, "y": 809, "width": 1164, "height": 377.5, "fill": "#ffffff", "borderColor": "#00000000", "borderWidth": 0, "borderRadius": 0, "opacity": 1, "padding": 0, "visible": true, "locked": false, "aspectRatio": "original", "cropMode": "cover", "slotIndex": 2 },
+      { "id": "photo-4", "type": "image_frame", "x": 18, "y": 1204.5, "width": 1164, "height": 377.5, "fill": "#ffffff", "borderColor": "#00000000", "borderWidth": 0, "borderRadius": 0, "opacity": 1, "padding": 0, "visible": true, "locked": false, "aspectRatio": "original", "cropMode": "cover", "slotIndex": 3 }
+    ]
+  }
+}
