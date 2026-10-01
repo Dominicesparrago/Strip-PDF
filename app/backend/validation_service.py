@@ -88,7 +88,8 @@ def _frame_size(slot: Mapping[str, Any], slot_index: int,
     strip_w = strip.get("stripWidthMm", settings.get("stripWidthMm"))
     strip_h = strip.get("stripHeightMm", settings.get("stripHeightMm"))
     template_data = template or {}
-    design = template_data.get("design", template_data)
+    override = strip.get("designOverride") if isinstance(strip.get("designOverride"), Mapping) else None
+    design = override if override is not None else template_data.get("design", template_data)
     artboard = design.get("artboard", {}) if isinstance(design, Mapping) else {}
     artboard_w = artboard.get("width", artboard.get("widthMm")) if isinstance(artboard, Mapping) else None
     artboard_h = artboard.get("height", artboard.get("heightMm")) if isinstance(artboard, Mapping) else None
@@ -176,11 +177,14 @@ def validate_print(layout: Mapping[str, Any] | None,
 
     page_width = layout.get("pageWidthMm", PAGE_WIDTH_MM)
     page_height = layout.get("pageHeightMm", PAGE_HEIGHT_MM)
+    orientation = str(layout.get("orientation", settings.get("orientation", "landscape"))).lower()
+    expected_width, expected_height = ((PAGE_HEIGHT_MM, PAGE_WIDTH_MM) if orientation == "portrait"
+                                       else (PAGE_WIDTH_MM, PAGE_HEIGHT_MM))
     page_ok = (str(layout.get("paper", settings.get("paper", "A4"))).upper() == "A4"
-               and str(layout.get("orientation", settings.get("orientation", "landscape"))).lower() == "landscape"
-               and _near(page_width, PAGE_WIDTH_MM) and _near(page_height, PAGE_HEIGHT_MM))
+               and orientation in {"landscape", "portrait"}
+               and _near(page_width, expected_width) and _near(page_height, expected_height))
     add("page_size", "PASS" if page_ok else "ERROR",
-        "Page is A4 landscape." if page_ok else "The print layout must use A4 landscape (297 x 210 mm).",
+        f"Page is A4 {orientation}." if page_ok else "The print layout must use A4 dimensions.",
         {"pageWidthMm": page_width, "pageHeightMm": page_height})
 
     try:
@@ -224,7 +228,11 @@ def validate_print(layout: Mapping[str, Any] | None,
             except (KeyError, TypeError, ValueError, OverflowError):
                 clipping.append({"page": page_index, "stripId": placement.get("stripId"), "reason": "invalid_geometry"})
                 continue
-            if x < margin - 1e-6 or y < margin - 1e-6 or x + width > PAGE_WIDTH_MM - margin + 1e-6 or y + height > PAGE_HEIGHT_MM - margin + 1e-6:
+            if (not all(math.isfinite(value) for value in (x, y, width, height))
+                    or width <= 0 or height <= 0
+                    or x < margin - 1e-6 or y < margin - 1e-6
+                    or x + width > float(page_width) - margin + 1e-6
+                    or y + height > float(page_height) - margin + 1e-6):
                 clipping.append({
                     "page": page_index,
                     "stripId": placement.get("stripId"),
@@ -252,7 +260,8 @@ def validate_print(layout: Mapping[str, Any] | None,
                     guide_clipping.append({"page": page_index, "stripId": placement.get("stripId"),
                                            "guideIndex": guide_index, "reason": "invalid_geometry"})
                     continue
-                if any(x < 0 or y < 0 or x > PAGE_WIDTH_MM or y > PAGE_HEIGHT_MM for x, y in points):
+                if any(not math.isfinite(x) or not math.isfinite(y) or x < 0 or y < 0
+                       or x > float(page_width) or y > float(page_height) for x, y in points):
                     guide_clipping.append({"page": page_index, "stripId": placement.get("stripId"),
                                            "guideIndex": guide_index, "points": points})
     add("cut_guides", "ERROR" if guide_clipping else "PASS",

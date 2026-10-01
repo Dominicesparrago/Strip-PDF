@@ -368,12 +368,23 @@ input[type="checkbox"]:focus-visible {
   position: relative;
 }
 
-[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 7px);
-  transform: translateX(-50%) translateY(2px);
+/* Tooltip presentation is a body-level host node (see visual.js): the host
+   re-renders attr(data-tooltip) for the hovered/focused control so content is
+   never clipped by ancestor overflow: hidden. [data-tooltip] only marks hosts
+   and establishes a local stacking context. */
+#tooltip-host {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: var(--z-tooltip);
+}
+
+#tooltip-host .tooltip {
+  position: fixed;
+  max-width: 280px;
   padding: 4px 9px;
   border-radius: var(--radius-md);
   background: var(--tooltip-bg);
@@ -383,27 +394,17 @@ input[type="checkbox"]:focus-visible {
   letter-spacing: 0.01em;
   white-space: nowrap;
   opacity: 0;
-  pointer-events: none;
+  transform: translateY(2px);
   transition: opacity var(--t-fast) 120ms, transform var(--t-fast) 120ms;
-  z-index: 300;
 }
 
-[data-tooltip]:hover::after,
-[data-tooltip]:focus-visible::after {
+#tooltip-host .tooltip.is-visible {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: none;
 }
 
-[data-tooltip-side="right"]::after {
-  left: calc(100% + 8px);
-  bottom: 50%;
-  transform: translate(0, 50%);
-}
-
-[data-tooltip-side="right"]:hover::after,
-[data-tooltip-side="right"]:focus-visible::after {
-  transform: translate(0, 50%);
-}
+#tooltip-host .tooltip.is-placed-left { transform: translateX(-100%); }
+#tooltip-host .tooltip.is-placed-left.is-visible { transform: none; }
 
 /* ------------------------------------------------------------- Utilities */
 /* The hidden attribute must always win over author display rules. */
@@ -430,3 +431,19 @@ input[type="checkbox"]:focus-visible {
 
 .text-muted { color: var(--text-2); }
 .text-faint { color: var(--text-3); }
+
+/* Functional selects kept out of sight; presentation controls mirror them
+   and forward value changes. The container must stay out of layout and hit
+   testing without relying on the hidden attribute (it holds live controls). */
+.parked {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  pointer-events: none;
+}

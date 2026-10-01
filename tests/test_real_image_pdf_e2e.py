@@ -98,8 +98,8 @@ class RealImagePdfWorkflowTests(unittest.TestCase):
         self.assertEqual(len(excluded["project"]["excludedImageIds"]), 1)
 
         clean = self.call("templates.load", {"templateId": "dcapture-clean"})["project"]
-        self.assertEqual(clean["design"]["artboard"]["width"], 1200)
-        self.assertEqual(clean["design"]["artboard"]["height"], 1600)
+        self.assertEqual(clean["design"]["artboard"]["width"], 600)
+        self.assertEqual(clean["design"]["artboard"]["height"], 1800)
         self.assertEqual(sum(item["type"] == "image_frame" for item in clean["design"]["elements"]), 4)
         background = next(item for item in clean["design"]["elements"] if item["type"] == "background")
         changed = self.call("design.update", {"changes": {
@@ -126,9 +126,10 @@ class RealImagePdfWorkflowTests(unittest.TestCase):
             self.assertEqual(cropped["project"]["strips"][0]["slots"][0]["crop"]["ratio"], ratio)
         self.call("design.undo")
         self.call("design.redo")
+        self.call("design.update", {"changes": {"elements": [{"id": "photo-1", "locked": False}]}})
         self.call("design.update", {"changes": {"elements": [{"id": "photo-1", "aspectRatio": "1:1"}]}})
         physical = self.call("print.get_layout")["pages"][0]["placements"][0]
-        self.assertEqual((physical["widthMm"], physical["heightMm"]), (54.0, 72.0))
+        self.assertEqual((physical["widthMm"], physical["heightMm"]), (50.8, 152.4))
 
         ids = [item["id"] for item in self.call("app.get_state")["project"]["images"]]
         self.call("images.remove", {"imageIds": ids[:4]})
@@ -140,11 +141,11 @@ class RealImagePdfWorkflowTests(unittest.TestCase):
             "cutGuides": True, "resolutionDpi": 300,
         }})
         self.assertTrue(settings["fit"]["valid"])
-        self.assertEqual(settings["fit"]["maximumCount"], 5)
-        invalid = self.call("print.update_settings", {"settings": {"stripsPerPage": 6}})
+        self.assertEqual(settings["fit"]["maximumCount"], 10)
+        invalid = self.call("print.update_settings", {"settings": {"stripsPerPage": 11}})
         self.assertFalse(invalid["fit"]["valid"])
-        self.assertEqual((invalid["fit"]["requestedCount"], invalid["fit"]["maximumCount"]), (6, 5))
-        self.assertAlmostEqual(invalid["fit"]["overflowMm"], 47.0)
+        self.assertEqual((invalid["fit"]["requestedCount"], invalid["fit"]["maximumCount"]), (11, 10))
+        self.assertAlmostEqual(invalid["fit"]["verticalOverflowMm"], 20.0)
         self.call("print.update_settings", {"settings": {"stripsPerPage": 5}})
 
         preview = self.call_job("print.preview", {"page": 0, "dpi": 96})["preview"]

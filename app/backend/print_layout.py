@@ -1,13 +1,7 @@
-"""Physical A4 print layout calculations.
+"""Physical A4 placement in millimeters, shared by preview and PDF.
 
-All public geometry is in millimeters and uses a top-left page origin. The
-layout object returned here is the single source of placement geometry for
-both the PDF writer and raster preview renderer.
-
-Defaults: A4 landscape, five 54 x 72 mm strips, 5 mm margins, and 2 mm gaps.
-The 54 x 72 mm body is a configurable assumed physical size matching the
-initial 3:4 DCapture Clean artboard; DCapture supplies raster dimensions, not
-authoritative millimeters. Template metadata may override this default.
+Strip bodies keep their canonical physical dimensions. Only their count and
+page positions change when paper, margins, or gaps change. Strips stay upright.
 """
 
 from __future__ import annotations
@@ -25,12 +19,12 @@ PT_PER_MM = POINTS_PER_INCH / MM_PER_INCH
 DEFAULT_SETTINGS: dict[str, Any] = {
     "paper": "A4",
     "orientation": "landscape",
-    "stripsPerPage": 5,
-    "stripWidthMm": 54.0,
-    "stripHeightMm": 72.0,
+    "stripsPerPage": "auto",
+    "stripWidthMm": 50.8,
+    "stripHeightMm": 152.4,
     "marginMm": 5.0,
-    "gapMm": 2.0,
-    "cutGuides": False,
+    "gapMm": 3.0,
+    "cutGuides": True,
     "resolutionDpi": 300,
 }
 
@@ -54,26 +48,30 @@ def _finite_number(value: Any, name: str) -> float:
 def normalize_settings(settings: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Return validated settings with defaults filled in.
 
-    Only A4 landscape is currently supported. Unknown settings are retained so
-    application-specific output options can travel with the normalized data.
+    Unknown settings are retained for application-specific output options.
     """
     supplied = dict(settings or {})
     normalized = {**DEFAULT_SETTINGS, **supplied}
     if str(normalized.get("paper", "A4")).upper() != "A4":
         raise PrintSettingsError("Only A4 paper is supported.")
-    if str(normalized.get("orientation", "landscape")).lower() != "landscape":
-        raise PrintSettingsError("Only landscape orientation is supported.")
+    orientation = str(normalized.get("orientation", "landscape")).lower()
+    if orientation not in {"landscape", "portrait"}:
+        raise PrintSettingsError("A4 orientation must be landscape or portrait.")
 
     count_value = normalized.get("stripsPerPage")
-    if isinstance(count_value, bool):
-        raise PrintSettingsError("stripsPerPage must be a positive whole number.")
-    try:
-        count = int(count_value)
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise PrintSettingsError("stripsPerPage must be a positive whole number.") from exc
-    if count <= 0 or float(count_value) != count:
-        raise PrintSettingsError("stripsPerPage must be a positive whole number.")
-    normalized["stripsPerPage"] = count
+    if isinstance(count_value, str) and count_value.lower() == "auto":
+        normalized["stripsPerPage"] = "auto"
+    else:
+        if isinstance(count_value, bool):
+            raise PrintSettingsError("stripsPerPage must be auto or a positive whole number.")
+        try:
+            count = int(count_value)
+            exact = float(count_value) == count
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise PrintSettingsError("stripsPerPage must be auto or a positive whole number.") from exc
+        if count <= 0 or not exact:
+            raise PrintSettingsError("stripsPerPage must be auto or a positive whole number.")
+        normalized["stripsPerPage"] = count
 
     for key in ("stripWidthMm", "stripHeightMm"):
         value = _finite_number(normalized.get(key), key)
@@ -91,9 +89,17 @@ def normalize_settings(settings: Mapping[str, Any] | None = None) -> dict[str, A
         raise PrintSettingsError("resolutionDpi must be greater than zero.")
     normalized["resolutionDpi"] = resolution
     normalized["paper"] = "A4"
-    normalized["orientation"] = "landscape"
+    normalized["orientation"] = orientation
     normalized["cutGuides"] = bool(normalized.get("cutGuides", False))
+    page_width, page_height = page_dimensions(orientation)
+    if normalized["marginMm"] * 2 >= min(page_width, page_height):
+        raise PrintSettingsError("Page margins leave no printable area.")
     return normalized
+
+
+def page_dimensions(orientation: str) -> tuple[float, float]:
+    """A4 dimensions without rotating any strip on the page."""
+    return (PAGE_HEIGHT_MM, PAGE_WIDTH_MM) if orientation == "portrait" else (PAGE_WIDTH_MM, PAGE_HEIGHT_MM)
 
 
 def calculate_fit(settings: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -103,23 +109,30 @@ def calculate_fit(settings: Mapping[str, Any] | None = None) -> dict[str, Any]:
     gap = normalized["gapMm"]
     strip_width = normalized["stripWidthMm"]
     strip_height = normalized["stripHeightMm"]
-    count = normalized["stripsPerPage"]
-    available_width = max(0.0, PAGE_WIDTH_MM - 2 * margin)
-    available_height = max(0.0, PAGE_HEIGHT_MM - 2 * margin)
-    required_width = count * strip_width + max(0, count - 1) * gap
+    requested = normalized["stripsPerPage"]
+    page_width, page_height = page_dimensions(normalized["orientation"])
+    available_width = page_width - 2 * margin
+    available_height = page_height - 2 * margin
+    columns = max(0, int(math.floor((available_width + gap + 1e-9) / (strip_width + gap))))
+    rows = max(0, int(math.floor((available_height + gap + 1e-9) / (strip_height + gap))))
+    maximum = columns * rows
+    automatic = requested == "auto"
+    effective = maximum if automatic else min(requested, maximum)
+    valid = maximum > 0 and (automatic or requested <= maximum)
+    count_in_row = columns if automatic else min(requested, max(1, columns))
+    required_width = count_in_row * strip_width + max(0, count_in_row - 1) * gap
+    required_rows = 1 if automatic else math.ceil(requested / max(1, columns))
+    required_height = required_rows * strip_height + max(0, required_rows - 1) * gap
     overflow = max(0.0, required_width - available_width)
-    height_fits = strip_height <= available_height + 1e-9
-    if strip_width > available_width + 1e-9 or not height_fits:
-        maximum = 0
-    else:
-        maximum = max(0, int(math.floor((available_width + gap + 1e-9) / (strip_width + gap))))
-    valid = count <= maximum and height_fits
-    required_height = strip_height
     vertical_overflow = max(0.0, required_height - available_height)
     return {
         "valid": valid,
-        "requestedCount": count,
+        "auto": automatic,
+        "requestedCount": requested,
+        "effectiveCount": effective,
         "maximumCount": maximum,
+        "columns": columns,
+        "rows": rows,
         "availableWidthMm": _round(available_width),
         "requiredWidthMm": _round(required_width),
         "overflowMm": _round(overflow),
@@ -232,46 +245,57 @@ def calculate_layout(settings: Mapping[str, Any] | None = None,
     normalized = normalize_settings(settings)
     strip_records = _normalise_strips(strips)
     fit = calculate_fit(normalized)
-    count_per_page = normalized["stripsPerPage"]
+    count_per_page = fit["effectiveCount"]
     strip_width = normalized["stripWidthMm"]
     strip_height = normalized["stripHeightMm"]
     margin = normalized["marginMm"]
     gap = normalized["gapMm"]
-
-    start_y = margin + (PAGE_HEIGHT_MM - 2 * margin - strip_height) / 2
+    page_width, page_height = page_dimensions(normalized["orientation"])
     pages: list[dict[str, Any]] = []
+    if count_per_page == 0:
+        return {"pageWidthMm": page_width, "pageHeightMm": page_height,
+                "paper": "A4", "orientation": normalized["orientation"],
+                "settings": normalized, "fit": fit, "pages": pages}
+    columns = fit["columns"]
     for start in range(0, len(strip_records), count_per_page):
         chunk = strip_records[start:start + count_per_page]
-        # Center each page's actual group. A partial final page remains the
-        # same size but is centered in its own printable area.
-        group_width = len(chunk) * strip_width + max(0, len(chunk) - 1) * gap
-        start_x = margin + (PAGE_WIDTH_MM - 2 * margin - group_width) / 2
+        row_count = math.ceil(len(chunk) / columns)
+        group_height = row_count * strip_height + (row_count - 1) * gap
+        start_y = (page_height - group_height) / 2
         placements: list[dict[str, Any]] = []
         for position, strip in enumerate(chunk):
-            x = start_x + position * (strip_width + gap)
+            row, column = divmod(position, columns)
+            items_in_row = min(columns, len(chunk) - row * columns)
+            group_width = items_in_row * strip_width + (items_in_row - 1) * gap
+            x = (page_width - group_width) / 2 + column * (strip_width + gap)
+            y = start_y + row * (strip_height + gap)
             placement: dict[str, Any] = {
                 "stripId": strip["id"],
                 "xMm": _round(x),
-                "yMm": _round(start_y),
+                "yMm": _round(y),
                 "widthMm": _round(strip_width),
                 "heightMm": _round(strip_height),
             }
             if normalized["cutGuides"]:
-                left_clearance = x if position == 0 else gap
-                right_clearance = PAGE_WIDTH_MM - (x + strip_width) if position == len(chunk) - 1 else gap
+                left_clearance = x if column == 0 else gap
+                right_clearance = page_width - (x + strip_width) if column == items_in_row - 1 else gap
                 clearances = {
                     "left": left_clearance,
                     "right": right_clearance,
-                    "top": start_y,
-                    "bottom": PAGE_HEIGHT_MM - (start_y + strip_height),
+                    "top": y if row == 0 else gap,
+                    "bottom": page_height - (y + strip_height) if row == row_count - 1 else gap,
                 }
                 shared_sides = set()
-                if position > 0:
+                if column > 0:
                     shared_sides.add("left")
-                if position < len(chunk) - 1:
+                if column < items_in_row - 1:
                     shared_sides.add("right")
+                if row > 0:
+                    shared_sides.add("top")
+                if row < row_count - 1:
+                    shared_sides.add("bottom")
                 placement["cutGuides"] = cut_guide_lines(
-                    x, start_y, strip_width, strip_height,
+                    x, y, strip_width, strip_height,
                     clearances_mm=clearances,
                     shared_sides=shared_sides,
                 )
@@ -279,10 +303,10 @@ def calculate_layout(settings: Mapping[str, Any] | None = None,
         pages.append({"index": len(pages), "placements": placements})
 
     return {
-        "pageWidthMm": PAGE_WIDTH_MM,
-        "pageHeightMm": PAGE_HEIGHT_MM,
+        "pageWidthMm": page_width,
+        "pageHeightMm": page_height,
         "paper": "A4",
-        "orientation": "landscape",
+        "orientation": normalized["orientation"],
         "settings": normalized,
         "fit": fit,
         "pages": pages,

@@ -89,7 +89,13 @@ class StripGroupingTests(unittest.TestCase):
         self.assertEqual(strip["slots"][0]["crop"], {"mode": "cover", "ratio": "4:3", "zoom": 4.0, "offsetX": -1.0, "offsetY": 0.25})
         regrouped = generate_strips(records(4), previous_strips=result["strips"])
         self.assertEqual(regrouped["strips"][0]["slots"][0]["crop"]["zoom"], 4.0)
-        self.assertEqual(normalize_crop({"ratio": "original"}), {"mode": "cover", "ratio": "original", "zoom": 1.0, "offsetX": 0.0, "offsetY": 0.0})
+        self.assertEqual(normalize_crop({"ratio": "original"}), {"mode": "contain", "ratio": "original", "zoom": 1.0, "offsetX": 0.0, "offsetY": 0.0})
+
+    def test_same_strip_regroup_preserves_its_design_override(self) -> None:
+        original = generate_strips(records(4))["strips"]
+        original[0]["designOverride"] = {"elements": [{"id": "label", "type": "text"}]}
+        regrouped = generate_strips(records(4), previous_strips=original)["strips"]
+        self.assertEqual(regrouped[0]["designOverride"], original[0]["designOverride"])
 
     def test_invalid_grouping_and_crop_inputs_are_reported(self) -> None:
         with self.assertRaises(ValueError):
@@ -122,6 +128,35 @@ class ImageImportTests(unittest.TestCase):
             self.assertTrue(thumbnail_path.is_file())
             with Image.open(thumbnail_path) as preview:
                 self.assertLessEqual(max(preview.size), 128)
+                self.assertAlmostEqual(preview.width / preview.height, 1200 / 900, delta=0.02)
+
+    def test_adaptive_image_metadata_and_thumbnails_preserve_source_aspect(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dimensions = [(300, 900), (900, 300), (600, 600), (90, 1200)]
+            paths = []
+            for index, size in enumerate(dimensions, 1):
+                path = root / f"IMG_{index:03}.jpg"
+                Image.new("RGB", size, color=(30 * index, 60, 90)).save(path)
+                paths.append(path)
+            service = ImageService(thumbnail_dir=root / "cache", thumbnail_size=(128, 128))
+
+            imported = service.import_paths(paths)["images"]
+
+            self.assertEqual(len(imported), len(dimensions))
+            for index, (item, (width, height)) in enumerate(zip(imported, dimensions)):
+                expected_orientation = "landscape" if width > height else "portrait" if height > width else "square"
+                self.assertEqual((item["width"], item["height"]), (width, height))
+                self.assertAlmostEqual(item["aspectRatio"], width / height, places=5)
+                self.assertEqual(item["orientation"], expected_orientation)
+                self.assertEqual(item["previewFit"], "contain")
+                self.assertEqual(item["internalId"], item["id"])
+                self.assertEqual((item["originalName"], item["displayName"]), (f"IMG_{index + 1:03}.jpg", f"IMG_{index + 1:03}.jpg"))
+                thumb_uri = service.get_thumbnail(item["id"], as_data_uri=False)
+                thumbnail_path = Path(thumb_uri.removeprefix("file:///"))
+                with Image.open(thumbnail_path) as preview:
+                    self.assertLessEqual(max(preview.size), 128)
+                    self.assertAlmostEqual(preview.width / preview.height, width / height, delta=0.03)
 
     def test_unsupported_corrupt_and_missing_inputs_do_not_abort_batch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

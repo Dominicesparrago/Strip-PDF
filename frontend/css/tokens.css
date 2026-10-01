@@ -118,6 +118,21 @@
   /* Control sizing */
   --control-h: 30px;
   --control-h-sm: 26px;
+
+  /* ------------------------------------------- Z-index layer hierarchy ----
+     Deliberate global stacking order. Components must consume these tokens
+     instead of raw numbers; new layers slot between existing steps.        */
+  --z-base: 0;            /* workspace chrome (cards, panels)              */
+  --z-canvas: 10;         /* artboard content above the canvas backdrop    */
+  --z-selection: 20;      /* selected canvas elements within the stage     */
+  --z-overlay: 30;        /* editor overlay: hover, selection, handles     */
+  --z-toolbar: 40;        /* sticky panels/toolbars inside a workspace     */
+  --z-popover: 100;       /* dropdowns, menus, floating controls           */
+  --z-tooltip: 120;       /* tooltips (body-level host, never clipped)     */
+  --z-modal: 200;         /* modal backdrop                                */
+  --z-dialog: 210;        /* modal dialog content                          */
+  --z-toast: 300;         /* toast / critical notifications                */
+  --z-critical: 400;      /* busy overlay, boot splash                    */
 }
 
 /* =============================================================================
@@ -261,6 +276,18 @@ textarea {
 img {
   display: block;
   max-width: 100%;
+}
+
+/* Defensive: functional parked controls must never paint into the layout
+   even if later stylesheets fail to load (primary rule in base.css). */
+.parked {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  pointer-events: none;
 }
 
 /* Gentle theme transition (root-level crossfade). */

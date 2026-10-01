@@ -3,7 +3,7 @@
 ## Runtime
 
 - Python owns application state, image processing, physical layout, persistence, validation, and PDF output.
-- PyWebView hosts a local HTML/CSS/JavaScript frontend and exposes a single structured bridge entry point: `window.pywebview.api.invoke(method, params)`. A static server bound to loopback serves the frontend modules; no remote service is needed.
+- PyWebView hosts a local HTML/CSS/JavaScript frontend and exposes a single structured bridge entry point: `window.pywebview.api.invoke(method, params)`. A static server bound to loopback serves the frontend modules, including `.mjs` files with a JavaScript MIME type; no remote service is needed.
 - PyWebView's Python DOM drop handler extracts `pywebviewFullPath` values and dispatches `studio:files-dropped`; the existing import API handles validation and background processing.
 - Frontend code owns interaction and visualization. It does not calculate physical print placement or read/write project files directly.
 - Expensive image/PDF tasks run in a worker pool. The UI queries job state through the bridge; all bridge results use `{ "ok": true, "data": ... }` or `{ "ok": false, "error": ..., "detail": ... }`.
@@ -47,11 +47,15 @@ Application theme mode is stored separately from project contents so Light/Dark/
 
 ## Data and coordinate rules
 
-- Strip design uses a fixed logical artboard with a physical size in millimeters stored in template metadata. Editor zoom is presentation state and never affects physical output size.
-- Raster composition fits the artboard inside the configured physical strip raster, preserving its proportions if a custom physical width/height has a different ratio.
-- Image crop rectangles are normalized to each source image; design elements use artboard coordinates and stable IDs.
-- Print layout uses millimeters from A4 landscape dimensions `297 × 210`; PDF points are derived only at the PDF boundary (`72 / 25.4` points per mm).
-- The same `print_layout` result is consumed by the PDF preview and PDF writer. Strip count is validated against page margins, physical strip width, and gaps; invalid counts are not auto-scaled.
+- `project.stripSpec` is the canonical strip geometry: preset, physical millimeters, design width/height, nominal DPI, orientation, and frame count. Template load and explicit preset changes update this object. Print settings expose derived physical strip dimensions for older API clients.
+- Strip design uses the specification's logical artboard. Editor and PDF preview zoom are presentation state and never affect physical output size. New preset designs have the same aspect ratio in logical and physical space.
+- Raster composition maps logical artboard coordinates into the physical strip raster. In Original mode, each populated image frame resolves from its assigned source ratio; fixed ratio modes keep their target frame geometry and apply cover/contain inside it.
+- Image import records EXIF-corrected dimensions, aspect ratio, orientation, stable internal identity, original display name, and contain-fit preview guidance. Thumbnails and strip frames preserve source proportions; cover crops excess, contain shows the full image, and neither changes physical strip dimensions.
+- Shared/template design remains in `project.design`; edits scoped to a strip are full structured `designOverride` records on that strip. Elements use stable `syncKey` values so Apply to All can update/create a logical counterpart without changing slot assignments or crop records. The complete propagation is one history transaction.
+- Text is a structured design element. Canvas and raster strip/PDF renderers use the controlled Arial, Georgia, and Courier New families, with wrapping, clipping, alignment, color, opacity, letter spacing, and line height stored in design state. Custom templates persist text without photo assignments.
+- Image crop rectangles are normalized to each source image; design elements use artboard coordinates and stable IDs/sync keys.
+- Print layout uses millimeters from A4 landscape `297 × 210` or portrait `210 × 297`; PDF points are derived only at the PDF boundary (`72 / 25.4` points per mm).
+- The same `print_layout` result is consumed by the PDF preview and PDF writer. Auto count uses safe upright capacity; excess manual requests report a fit error and safe page count. Strip boxes never shrink.
 - The PDF places each rendered raster into the exact configured millimeter box. Raster integer-pixel rounding must not silently reduce the measured strip body.
 - PDF output preserves vertical strip orientation and uses a partial final page without resizing strips.
 
@@ -61,8 +65,8 @@ Application theme mode is stored separately from project contents so Light/Dark/
 - Pillow for image metadata, thumbnails, and raster composition; ReportLab for deterministic PDF placement and page dimensions.
 - Windows uses PyWebView's Edge Chromium renderer and requires the Microsoft Edge WebView2 Runtime.
 - JSON for versioned template/project/preset data. Imported originals are referenced rather than duplicated by default.
-- The sibling DCapture result implementation creates a 1200 × 1600 px (3:4) warm off-white sheet (`#f6f3eb`) with four vertically stacked photo areas and 18 px outer/inter-slot gaps. It contains no text/decorative overlays in the current result renderer. The built-in `DCapture Clean` reproduces that structure as editable vector/design data, without embedding user photographs.
-- DCapture defines pixels/proportions but no physical print measurement. The configurable initial physical default is therefore 54 × 72 mm (the exact 3:4 reference ratio); this assumption is visible in built-in template metadata and print settings. Default incomplete group behavior is `empty`; default print page is A4 landscape, five strips per page, with editable physical strip width/margins/gaps.
+- The source DCapture reference used a 1200 × 1600 logical sheet with a warm off-white background and four photo areas. Saved legacy projects retain those coordinates and their original physical size. Explicit preset selection maps their element rectangles through normalized coordinates.
+- New projects and the built-in `DCapture Clean` template use the `Photobooth 2 × 6 in` specification: 600 × 1800 logical units, 50.8 × 152.4 mm, four equal locked placeholder frames that adapt per populated source. The optional 54 × 180 mm and custom specifications keep user choice explicit. Default incomplete group behavior is `empty`; print page defaults to A4 landscape, Auto copies, 5 mm margins, 3 mm gap, and cut guides.
 
 ## Integration flow
 

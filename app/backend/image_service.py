@@ -32,7 +32,7 @@ except (ImportError, OSError):  # Keep the rest of the application importable.
     _DecompressionBombWarning = Warning
 
 
-SUPPORTED_FORMATS = {".jpg", ".jpeg", ".png", ".webp"}
+SUPPORTED_FORMATS = {".jpg", ".jpeg", ".jpe", ".png", ".webp"}
 _ID_NAMESPACE = uuid.UUID("2f294baa-6a42-5f5e-98ed-b244d6fd17ce")
 
 
@@ -79,7 +79,7 @@ class ImageService:
         self._thumbnail_by_id: dict[str, Path] = {}
         self._cache_lock = threading.Lock()
 
-    def import_paths(self, paths: Iterable[str | os.PathLike[str]]) -> dict:
+    def import_paths(self, paths: Iterable[str | os.PathLike[str]], *, refresh_thumbnails: bool = False) -> dict:
         """Import a batch, returning valid images and per-path rejections.
 
         Rejections never abort the rest of the batch. The returned `images`
@@ -139,7 +139,7 @@ class ImageService:
                             width, height = height, width
                         # Extension checks alone are insufficient: reject e.g. a
                         # renamed GIF rather than claiming to import it as JPEG.
-                        expected = {".jpg": {"JPEG"}, ".jpeg": {"JPEG"}, ".png": {"PNG"}, ".webp": {"WEBP"}}
+                        expected = {".jpg": {"JPEG"}, ".jpeg": {"JPEG"}, ".jpe": {"JPEG"}, ".png": {"PNG"}, ".webp": {"WEBP"}}
                         if source_format not in expected[suffix]:
                             errors.append(self._error_record(path, "unsupported", "File contents do not match a supported image format."))
                             continue
@@ -149,20 +149,36 @@ class ImageService:
 
                 stat = path.stat()
                 image_id = _path_id(path)
-                thumbnail_path = self._write_thumbnail(path, image_id, stat.st_mtime_ns, stat.st_size)
+                try:
+                    thumbnail_path = self._write_thumbnail(path, image_id, stat.st_mtime_ns, stat.st_size, refresh=refresh_thumbnails)
+                except (OSError, ValueError, _DecompressionBombError, _DecompressionBombWarning):
+                    # A cache failure must not turn a valid original into a
+                    # rejected import. The card can surface FAILED and Retry.
+                    thumbnail_path = None
+                    self._thumbnail_by_id.pop(image_id, None)
                 modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+                ratio = round(width / height, 6)
+                orientation = "landscape" if width > height else "portrait" if height > width else "square"
                 record = {
                     "id": image_id,
+                    "internalId": image_id,
                     "path": str(path),
                     "name": path.name,
+                    "originalName": path.name,
+                    "displayName": path.name,
                     "extension": suffix,
                     "width": int(width),
                     "height": int(height),
+                    "aspectRatio": ratio,
+                    "orientation": orientation,
+                    "previewFit": "contain",
+                    "warning": None,
                     "modifiedAt": modified,
                     "status": "ready",
-                    "thumbnail": _file_uri(thumbnail_path),
+                    "thumbnail": _file_uri(thumbnail_path) if thumbnail_path else None,
                 }
-                self._thumbnail_by_id[image_id] = thumbnail_path
+                if thumbnail_path:
+                    self._thumbnail_by_id[image_id] = thumbnail_path
                 images.append(record)
             except (UnidentifiedImageError, OSError, ValueError, _DecompressionBombError, _DecompressionBombWarning) as exc:
                 # Do not expose Pillow or filesystem internals in the message.
@@ -184,12 +200,12 @@ class ImageService:
             return None
         return f"data:image/webp;base64,{encoded}"
 
-    def _write_thumbnail(self, source_path: Path, image_id: str, mtime_ns: int, file_size: int) -> Path:
+    def _write_thumbnail(self, source_path: Path, image_id: str, mtime_ns: int, file_size: int, *, refresh: bool = False) -> Path:
         fingerprint = f"{image_id}:{mtime_ns}:{file_size}:{self.thumbnail_size[0]}x{self.thumbnail_size[1]}"
         cache_key = hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()
         destination = self.thumbnail_dir / f"{cache_key}.webp"
         with self._cache_lock:
-            if destination.is_file():
+            if destination.is_file() and not refresh:
                 return destination
             self.thumbnail_dir.mkdir(parents=True, exist_ok=True)
             temporary_name: str | None = None

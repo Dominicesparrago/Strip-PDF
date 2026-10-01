@@ -31,10 +31,18 @@ The frontend/backend contract is documented in [FRONTEND_CONTRACT.md](FRONTEND_C
 
 ## File ownership
 
-- LUNA: `app/`, `tests/`, `templates/builtin/`, `frontend/js/api.js`, `frontend/js/state.js`, and functional modules under `frontend/js/`.
+- LUNA: `app/`, `tests/`, `templates/builtin/`, `frontend/js/app.js`, `frontend/js/api.js`, `frontend/js/state.js`, `frontend/js/designer_geometry.mjs`, and other functional modules under `frontend/js/`.
 - GLM: `frontend/index.html`, `frontend/css/`, and `frontend/js/visual.js` (presentation/layout/theme and visual-only event handling).
-- Shared: `AI_WORK_BOUNDARIES.md`, `FRONTEND_CONTRACT.md`, `ARCHITECTURE.md`, semantic DOM hooks, and `frontend/js/app.js` entry-point wiring. Coordinate before changing shared hooks.
+- Shared: `AI_WORK_BOUNDARIES.md`, `FRONTEND_CONTRACT.md`, `ARCHITECTURE.md`, semantic DOM hooks, and integration wiring between presentation and functional modules. The functional behavior in `frontend/js/app.js` remains Luna-owned; coordinate changes to shared hooks.
 
 LUNA must not rewrite `frontend/js/visual.js`. A genuine compatibility defect may be fixed there only with the smallest targeted change, while preserving its presentation behavior and documenting the hook in `FRONTEND_CONTRACT.md`.
 
 The repository was initially empty. The sibling `../DCapture-Photobooth` is a read-only reference; do not modify it.
+
+## Geometry and image pipeline integration (2026-09-29)
+
+- Preserve the ownership split above. Targeted functional fixes may add semantic hooks to the GLM-owned frontend without changing its dark theme or visual system.
+- `project.stripSpec` owns strip preset, physical millimeters, design dimensions, and frame count. Print settings expose derived strip dimensions for compatibility; source image pixels and preview zoom do not set physical strip size.
+- Built-in frame geometry stays locked during normal crop editing. Crop state belongs to strip slots; unlocking a frame changes its layout editability only.
+- Original image paths remain the source for final rendering. Cached thumbnails serve library and editor display only, with loading, ready, failed, and retry states.
+- `print_layout` returns exact millimeter placements for PDF and preview. Manual copy counts above capacity report a fit error and never shrink strip bodies.

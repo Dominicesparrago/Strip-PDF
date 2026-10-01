@@ -16,6 +16,10 @@ from app.backend.drop_service import extract_dropped_paths
 
 
 class _QuietHandler(SimpleHTTPRequestHandler):
+    # Windows' system MIME registry can map ES module files to text/plain.
+    # Chromium rejects that response type for static import() dependencies.
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map, ".mjs": "text/javascript"}
+
     def log_message(self, *_: object) -> None:
         pass
 

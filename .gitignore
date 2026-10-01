@@ -1,5 +1,6 @@
 .venv/
 .venv-win/
+*.egg-info/
 .runtime-data/
 __pycache__/
 *.py[cod]

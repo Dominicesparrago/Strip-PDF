@@ -4,7 +4,10 @@ export async function invoke(method, params = {}) {
   const response = await bridge.invoke(method, params);
   if (!response || typeof response !== 'object') throw new Error('The backend returned an invalid response.');
   if (!response.ok) throw new Error(response.error || 'The request failed.');
-  return response.data;
+  const data = response.data;
+  return response.history && data && typeof data === 'object' && !Array.isArray(data)
+    ? { ...data, history: data.history || response.history }
+    : data;
 }
 
 export async function pollJob(jobId, onProgress = () => {}) {

@@ -13,4 +13,4 @@ python -m pip install -e ".[dev]"
 python -m app.main
 ```
 
-Run automated checks with `python -m pytest`. The initial physical strip default is 54 × 72 mm (3:4), because the DCapture reference provides a 1200 × 1600 px result but no physical print measurement. Change strip size in the print settings when the intended stock measurement is known.
+Run automated checks with `python -m pytest`. New projects use a 2 × 6 in (50.8 × 152.4 mm) vertical strip with four adaptive photo frames. Legacy projects preserve their saved geometry until a different strip preset is selected.

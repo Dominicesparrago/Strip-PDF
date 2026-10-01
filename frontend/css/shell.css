@@ -26,7 +26,7 @@ html {
 #boot-splash {
   position: fixed;
   inset: 0;
-  z-index: 500;
+  z-index: var(--z-critical);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -459,6 +459,13 @@ main[data-panel="studio"] {
   .ws-split-3 > .ws-panel-right {
     grid-column: 1 / -1;
   }
+
+  /* Three-column workspaces drop their last child into a full-width bottom
+     row with its own scroll, so it can never collide with the canvas. */
+  .ws-split-3 > aside.ws-panel:last-child {
+    grid-column: 1 / -1;
+    max-height: 280px;
+  }
 }
 
 /* ===================================================== Cards / panels */
@@ -642,6 +649,25 @@ main[data-panel="studio"] {
 @media (max-width: 1280px) {
   .ws-split {
     grid-template-columns: var(--panel-width-compact) 1fr;
+  }
+}
+
+/* Small-viewport guard: workspaces may scroll as a whole when panels can no
+   longer shrink; sticky chrome (topbar/statusbar) stays fixed by the grid. */
+@media (max-width: 900px) {
+  .view.is-active {
+    overflow-y: auto;
+  }
+
+  .view.is-active > .ws {
+    overflow: visible;
+    height: auto;
+    min-height: 100%;
+    grid-auto-rows: auto;
+  }
+
+  .view.is-active .card {
+    max-height: none;
   }
 }
 

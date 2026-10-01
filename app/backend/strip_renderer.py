@@ -4,19 +4,21 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
 try:
-    from PIL import Image, ImageColor, ImageDraw, ImageOps
+    from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFont, ImageOps
     _PIL_ERROR: ImportError | None = None
 except ImportError as exc:  # Keep non-image portions of the application importable.
-    Image = ImageColor = ImageDraw = ImageOps = None  # type: ignore[assignment]
+    Image = ImageChops = ImageColor = ImageDraw = ImageFont = ImageOps = None  # type: ignore[assignment]
     _PIL_ERROR = exc
 
 from app.backend.models import default_design
+from app.backend.strip_geometry import resolve_frame_layout
 
 
 def render_strips(
@@ -25,6 +27,8 @@ def render_strips(
     design: Mapping[str, Any] | None,
     settings: Mapping[str, Any],
     output_dir: str | os.PathLike[str],
+    *,
+    adaptive_frame_layout: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Render strips one at a time, avoiding a batch of full-resolution images in memory."""
     if Image is None:
@@ -34,8 +38,8 @@ def render_strips(
     image_map = {str(item.get("id")): item for item in images if item.get("id") is not None}
     resolved_design = dict(design or default_design())
     dpi = _positive(settings.get("resolutionDpi", 300), "resolutionDpi")
-    width_mm = _positive(settings.get("stripWidthMm", 54), "stripWidthMm")
-    height_mm = _positive(settings.get("stripHeightMm", 72), "stripHeightMm")
+    width_mm = _positive(settings.get("stripWidthMm", 50.8), "stripWidthMm")
+    height_mm = _positive(settings.get("stripHeightMm", 152.4), "stripHeightMm")
     width_px = max(1, round(width_mm * dpi / 25.4))
     height_px = max(1, round(height_mm * dpi / 25.4))
     if width_px > 40000 or height_px > 40000 or width_px * height_px > 80_000_000:
@@ -46,17 +50,20 @@ def render_strips(
         strip_id = str(strip.get("id") or "")
         if not strip_id:
             raise ValueError("Every strip needs an ID before it can be rendered.")
+        strip_design = strip.get("designOverride") if isinstance(strip.get("designOverride"), Mapping) else resolved_design
         key_data = {
             "strip": strip,
-            "design": resolved_design,
+            "design": strip_design,
             "widthPx": width_px,
             "heightPx": height_px,
+            "adaptiveFrameLayout": adaptive_frame_layout,
             "sourceStats": _source_fingerprints(strip, image_map),
         }
         key = hashlib.sha256(json.dumps(key_data, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")).hexdigest()
         destination = root / f"{key}.png"
         if not destination.is_file() or destination.stat().st_size == 0:
-            _render_one(strip, image_map, resolved_design, width_px, height_px, destination, dpi)
+            _render_one(strip, image_map, strip_design, width_px, height_px, destination, dpi,
+                        adaptive_frame_layout=adaptive_frame_layout)
         rendered.append({"id": strip_id, "renderPath": str(destination), "path": str(destination)})
     return rendered
 
@@ -67,22 +74,26 @@ def render_one(
     design: Mapping[str, Any] | None,
     settings: Mapping[str, Any],
     output_path: str | os.PathLike[str],
+    *,
+    adaptive_frame_layout: bool | None = None,
 ) -> dict[str, Any]:
     """Render one strip to a lossless PNG at the requested physical DPI."""
     if Image is None:
         raise RuntimeError(f"Pillow is required to render strips: {_PIL_ERROR}")
     dpi = _positive(settings.get("resolutionDpi", 300), "resolutionDpi")
-    width_px = max(1, round(_positive(settings.get("stripWidthMm", 54), "stripWidthMm") * dpi / 25.4))
-    height_px = max(1, round(_positive(settings.get("stripHeightMm", 72), "stripHeightMm") * dpi / 25.4))
+    width_px = max(1, round(_positive(settings.get("stripWidthMm", 50.8), "stripWidthMm") * dpi / 25.4))
+    height_px = max(1, round(_positive(settings.get("stripHeightMm", 152.4), "stripHeightMm") * dpi / 25.4))
     target = Path(output_path).expanduser().resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
     image_map = {str(item.get("id")): item for item in images if item.get("id") is not None}
-    _render_one(strip, image_map, dict(design or default_design()), width_px, height_px, target, dpi)
+    _render_one(strip, image_map, dict(design or default_design()), width_px, height_px, target, dpi,
+                adaptive_frame_layout=adaptive_frame_layout)
     return {"id": str(strip.get("id") or ""), "renderPath": str(target), "path": str(target)}
 
 
 def _render_one(strip: Mapping[str, Any], image_map: Mapping[str, Mapping[str, Any]],
-                design: Mapping[str, Any], width_px: int, height_px: int, destination: Path, dpi: float) -> None:
+                design: Mapping[str, Any], width_px: int, height_px: int, destination: Path, dpi: float,
+                *, adaptive_frame_layout: bool | None = None) -> None:
     if Image is None:
         raise RuntimeError(f"Pillow is required to render strips: {_PIL_ERROR}")
     artboard = design.get("artboard") if isinstance(design.get("artboard"), Mapping) else {}
@@ -96,6 +107,15 @@ def _render_one(strip: Mapping[str, Any], image_map: Mapping[str, Mapping[str, A
     output = Image.new("RGBA", (width_px, height_px), _rgba("#ffffff"))
     slots = strip.get("slots") if isinstance(strip.get("slots"), list) else []
     loaded: dict[str, Any] = {}
+    frame_layout = resolve_frame_layout(
+        design, strip, image_map,
+        adaptive=True if adaptive_frame_layout is None else bool(adaptive_frame_layout),
+    )
+    resolved_frames = {
+        str(item.get("elementId")): item
+        for item in frame_layout.get("frames", [])
+        if isinstance(item, Mapping) and item.get("elementId") is not None
+    }
 
     global_pattern = design.get("pattern") if isinstance(design.get("pattern"), Mapping) else {}
     pattern_drawn = False
@@ -103,10 +123,15 @@ def _render_one(strip: Mapping[str, Any], image_map: Mapping[str, Mapping[str, A
         if not isinstance(element, Mapping) or element.get("visible", True) is False:
             continue
         kind = str(element.get("type", "shape")).lower()
-        rect = _element_rect(element, scale_x, scale_y, width_px, height_px, offset_x, offset_y)
+        render_element = dict(element)
+        if kind == "image_frame":
+            resolved = resolved_frames.get(str(element.get("id")))
+            if resolved:
+                for key in ("x", "y", "width", "height"):
+                    render_element[key] = resolved[key]
+        rect = _element_rect(render_element, scale_x, scale_y, width_px, height_px, offset_x, offset_y)
         if rect[2] <= rect[0] or rect[3] <= rect[1]:
             continue
-        render_element = dict(element)
         try:
             render_element["borderWidth"] = float(element.get("borderWidth", 0) or 0) * board_scale
         except (TypeError, ValueError):
@@ -118,6 +143,8 @@ def _render_one(strip: Mapping[str, Any], image_map: Mapping[str, Mapping[str, A
                 if key in element:
                     render_element[key] = float(element[key]) * board_scale
             _draw_pattern(output, render_element, rect)
+        elif kind == "text":
+            _draw_text(output, render_element, rect, scale_x, scale_y)
         else:
             _draw_shape(output, render_element, rect, kind)
         if kind == "background" and not pattern_drawn and global_pattern.get("type", "none") != "none":
@@ -180,6 +207,134 @@ def _draw_shape(output: Any, element: Mapping[str, Any], rect: tuple[int, int, i
     layer.close()
 
 
+def _text_font(element: Mapping[str, Any], size: int) -> Any:
+    family = str(element.get("fontFamily", "Arial"))
+    if family not in {"Arial", "Georgia", "Courier New"}:
+        family = "Arial"
+    weight = str(element.get("fontWeight", "400")).lower()
+    bold = weight == "bold" or (weight.isdigit() and int(weight) >= 600)
+    italic = str(element.get("fontStyle", "normal")) == "italic"
+    names = {
+        ("Arial", False, False): ("arial.ttf", "Arial.ttf"),
+        ("Arial", True, False): ("arialbd.ttf", "Arial Bold.ttf"),
+        ("Arial", False, True): ("ariali.ttf", "Arial Italic.ttf"),
+        ("Arial", True, True): ("arialbi.ttf", "Arial Bold Italic.ttf"),
+        ("Georgia", False, False): ("georgia.ttf",),
+        ("Georgia", True, False): ("georgiab.ttf",),
+        ("Georgia", False, True): ("georgiai.ttf",),
+        ("Georgia", True, True): ("georgiaz.ttf",),
+        ("Courier New", False, False): ("cour.ttf",),
+        ("Courier New", True, False): ("courbd.ttf",),
+        ("Courier New", False, True): ("couri.ttf",),
+        ("Courier New", True, True): ("courbi.ttf",),
+    }
+    candidates = list(names.get((family, bold, italic), ()))
+    if os.name == "nt":
+        windows = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+        candidates = [str(windows / item) for item in candidates]
+    else:
+        portable = {"Arial": "DejaVuSans", "Georgia": "DejaVuSerif", "Courier New": "DejaVuSansMono"}[family]
+        candidates.extend((f"{portable}.ttf", "DejaVuSans.ttf"))
+    for candidate in candidates:
+        try:
+            return ImageFont.truetype(candidate, size=size)
+        except (OSError, ValueError):
+            continue
+    try:
+        return ImageFont.truetype(family, size=size)
+    except (OSError, ValueError):
+        return ImageFont.load_default(size=size)
+
+
+def _text_advance(font: Any, value: str, letter_spacing: float) -> float:
+    try:
+        width = float(font.getlength(value))
+    except (AttributeError, TypeError, ValueError):
+        box = font.getbbox(value)
+        width = float(box[2] - box[0])
+    return width + max(0, len(value) - 1) * letter_spacing
+
+
+def _wrap_text(text: str, font: Any, width: float, letter_spacing: float) -> list[str]:
+    lines: list[str] = []
+    for paragraph in text.split("\n"):
+        words = paragraph.split()
+        if not words:
+            lines.append("")
+            continue
+        line = ""
+        for word in words:
+            candidate = word if not line else f"{line} {word}"
+            if not line or _text_advance(font, candidate, letter_spacing) <= width:
+                line = candidate
+                continue
+            lines.append(line)
+            if _text_advance(font, word, letter_spacing) <= width:
+                line = word
+                continue
+            fragment = ""
+            for char in word:
+                candidate_fragment = fragment + char
+                if fragment and _text_advance(font, candidate_fragment, letter_spacing) > width:
+                    lines.append(fragment)
+                    fragment = char
+                else:
+                    fragment = candidate_fragment
+            line = fragment
+        lines.append(line)
+    return lines or [""]
+
+
+def _draw_text(output: Any, element: Mapping[str, Any], rect: tuple[int, int, int, int],
+               scale_x: float, scale_y: float) -> None:
+    left, top, right, bottom = rect
+    available_width, available_height = max(1, right - left), max(1, bottom - top)
+    try:
+        font_size = max(1, round(float(element.get("fontSize", 64)) * scale_x))
+        letter_spacing = float(element.get("letterSpacing", 0)) * scale_x
+        line_height = float(element.get("lineHeight", 1.2))
+        opacity = float(element.get("opacity", 1.0))
+    except (TypeError, ValueError, OverflowError):
+        font_size, letter_spacing, line_height, opacity = 64, 0.0, 1.2, 1.0
+    font = _text_font(element, font_size)
+    color = _with_opacity(_rgba(element.get("fill", element.get("color", "#000000"))), opacity)
+    text = str(element.get("text", element.get("content", "Text")))
+    lines = _wrap_text(text, font, available_width, letter_spacing)
+    line_step = max(1.0, font_size * line_height * (scale_y / max(scale_x, 1e-9)))
+    total_height = line_step * len(lines)
+    valign = str(element.get("verticalAlign", "middle"))
+    y = top if valign == "top" else bottom - total_height if valign == "bottom" else top + (available_height - total_height) / 2
+    align = str(element.get("textAlign", "center"))
+    layer = Image.new("RGBA", output.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    for line in lines:
+        width = _text_advance(font, line, letter_spacing)
+        x = left if align == "left" else right - width if align == "right" else left + (available_width - width) / 2
+        cursor = x
+        for index, char in enumerate(line):
+            try:
+                draw.text((round(cursor), round(y)), char, font=font, fill=color, anchor="lt")
+            except (TypeError, ValueError):
+                draw.text((round(cursor), round(y)), char, font=font, fill=color)
+            cursor += _text_advance(font, char, 0.0)
+            if index + 1 < len(line):
+                cursor += letter_spacing
+        y += line_step
+    clip = Image.new("L", output.size, 0)
+    ImageDraw.Draw(clip).rectangle((left, top, right - 1, bottom - 1), fill=255)
+    # `paste` with an opaque rectangle mask also copies the transparent layer's
+    # black RGB values. Mask the layer alpha itself so only glyph pixels are
+    # composited and text stays clipped to its element bounds.
+    glyph_alpha = layer.getchannel("A")
+    alpha = ImageChops.multiply(glyph_alpha, clip)
+    glyph_alpha.close()
+    layer.putalpha(alpha)
+    output.alpha_composite(layer)
+    alpha.close()
+    clip.close()
+    layer.close()
+
+
 def _draw_image_frame(output: Any, element: Mapping[str, Any], rect: tuple[int, int, int, int],
                       slots: list[Any], image_map: Mapping[str, Mapping[str, Any]], loaded: dict[str, Any],
                       scale_x: float, scale_y: float) -> None:
@@ -201,8 +356,9 @@ def _draw_image_frame(output: Any, element: Mapping[str, Any], rect: tuple[int, 
     if not source_path or not os.path.isfile(os.fspath(source_path)):
         return
 
-    slot_rect = _ratio_rect(rect, element, image_record)
-    inner = _inset(slot_rect, element.get("padding", 0), element, scale_x, scale_y)
+    # Frame geometry has already been resolved by ``resolve_frame_layout``.
+    # Fitting the source happens only inside that exact frame rectangle.
+    inner = _inset(rect, element.get("padding", 0), element, scale_x, scale_y)
     if inner[2] <= inner[0] or inner[3] <= inner[1]:
         return
     key = os.path.normcase(os.path.abspath(os.fspath(source_path)))
@@ -248,21 +404,28 @@ def _draw_image_frame(output: Any, element: Mapping[str, Any], rect: tuple[int, 
 
 
 def _ratio_rect(rect: tuple[int, int, int, int], element: Mapping[str, Any], image: Mapping[str, Any]) -> tuple[int, int, int, int]:
+    """Compatibility helper for callers that need a ratio-fit rectangle.
+
+    Normal strip rendering no longer uses this function. The canonical layout
+    resolves the frame rectangle before image fitting, including Original
+    source ratios and mixed-ratio stacks.
+    """
     left, top, right, bottom = rect
     box_w, box_h = right - left, bottom - top
     ratio = str(element.get("aspectRatio", "original"))
-    if ratio == "1:1":
-        desired = 1.0
-    elif ratio == "4:3":
-        desired = 4 / 3
-    elif ratio == "16:9":
-        desired = 16 / 9
-    else:
+    if ratio == "1:1": desired = 1.0
+    elif ratio == "4:3": desired = 4 / 3
+    elif ratio == "16:9": desired = 16 / 9
+    else: desired = None
+    if desired is None:
+        desired = None
         try:
-            iw, ih = float(image.get("width", image.get("widthPx"))), float(image.get("height", image.get("heightPx")))
-            desired = iw / ih if iw > 0 and ih > 0 else box_w / max(box_h, 1)
-        except (TypeError, ValueError, ZeroDivisionError):
-            desired = box_w / max(box_h, 1)
+            width = float(image.get("width"))
+            height = float(image.get("height"))
+            if width > 0 and height > 0 and math.isfinite(width / height): desired = width / height
+        except (AttributeError, TypeError, ValueError, OverflowError):
+            pass
+        if desired is None: return rect
     if box_w / max(box_h, 1) > desired:
         new_w = max(1, round(box_h * desired))
         left += (box_w - new_w) // 2
@@ -276,17 +439,33 @@ def _ratio_rect(rect: tuple[int, int, int, int], element: Mapping[str, Any], ima
 
 def _fit_image(source: Any, size: tuple[int, int], crop: Mapping[str, Any], element: Mapping[str, Any]) -> Any:
     target_w, target_h = max(1, size[0]), max(1, size[1])
-    mode = str(element.get("cropMode", crop.get("mode", "cover")))
+    fallback_mode = "contain" if str(element.get("aspectRatio", "original")) == "original" else "cover"
+    mode = str(crop.get("mode", element.get("cropMode", fallback_mode)))
     try:
         zoom = min(4.0, max(1.0, float(crop.get("zoom", 1.0))))
         offset_x = min(1.0, max(-1.0, float(crop.get("offsetX", 0.0))))
         offset_y = min(1.0, max(-1.0, float(crop.get("offsetY", 0.0))))
+        if not all(math.isfinite(value) for value in (zoom, offset_x, offset_y)):
+            raise ValueError("Crop values must be finite.")
     except (TypeError, ValueError):
         zoom, offset_x, offset_y = 1.0, 0.0, 0.0
     if mode == "contain":
-        fitted = ImageOps.contain(source, (target_w, target_h), method=Image.Resampling.LANCZOS)
+        base = ImageOps.contain(source, (target_w, target_h), method=Image.Resampling.LANCZOS)
+        draw_w = max(1, round(base.width * zoom))
+        draw_h = max(1, round(base.height * zoom))
+        fitted = base.resize((draw_w, draw_h), Image.Resampling.LANCZOS) if (draw_w, draw_h) != base.size else base.copy()
+        base.close()
         canvas = Image.new("RGBA", (target_w, target_h), _rgba(element.get("fill", "#ffffff")))
-        canvas.alpha_composite(fitted, ((target_w - fitted.width) // 2, (target_h - fitted.height) // 2))
+        left = round((target_w - fitted.width) / 2 + offset_x * abs(target_w - fitted.width) / 2)
+        top = round((target_h - fitted.height) / 2 + offset_y * abs(target_h - fitted.height) / 2)
+        dest_left, dest_top = max(0, left), max(0, top)
+        src_left, src_top = max(0, -left), max(0, -top)
+        visible_w = min(target_w - dest_left, fitted.width - src_left)
+        visible_h = min(target_h - dest_top, fitted.height - src_top)
+        if visible_w > 0 and visible_h > 0:
+            visible = fitted.crop((src_left, src_top, src_left + visible_w, src_top + visible_h))
+            canvas.alpha_composite(visible, (dest_left, dest_top))
+            visible.close()
         fitted.close()
         return canvas
 
@@ -346,10 +525,22 @@ def _draw_border(draw: Any, element: Mapping[str, Any], rect: tuple[int, int, in
         width = 0
     if width:
         color = _with_opacity(_rgba(element.get("borderColor", "#000000")), element.get("opacity", 1.0))
+        try:
+            radius = max(0, round(float(element.get("borderRadius", 0) or 0) * min(
+                (rect[2] - rect[0]) / max(float(element.get("width", 1)), 1),
+                (rect[3] - rect[1]) / max(float(element.get("height", 1)), 1),
+            )))
+        except (TypeError, ValueError):
+            radius = 0
         for inset in range(width):
             left, top, right, bottom = rect
             if right - left > 2 * inset and bottom - top > 2 * inset:
-                draw.rectangle((left + inset, top + inset, right - 1 - inset, bottom - 1 - inset), outline=color)
+                bounds = (left + inset, top + inset, right - 1 - inset, bottom - 1 - inset)
+                inner_radius = max(0, min(radius - inset, (bounds[2] - bounds[0]) // 2, (bounds[3] - bounds[1]) // 2))
+                if inner_radius:
+                    draw.rounded_rectangle(bounds, radius=inner_radius, outline=color)
+                else:
+                    draw.rectangle(bounds, outline=color)
 
 
 def _element_rect(element: Mapping[str, Any], scale_x: float, scale_y: float,

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .persistence import atomic_write_json, read_json_object, unwrap_document, utc_timestamp, versioned_document
+from .strip_geometry import legacy_strip_spec, normalize_strip_spec
 
 
 TEMPLATE_SCHEMA_VERSION = 1
@@ -64,6 +65,7 @@ class TemplateService:
         *,
         physical: Mapping[str, Any] | None = None,
         slots_per_strip: int | None = None,
+        strip_spec: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Save a design state as a new custom template, leaving its source intact."""
 
@@ -84,6 +86,11 @@ class TemplateService:
             record["physical"] = copy.deepcopy(dict(physical))
         if slots_per_strip is not None:
             record["slotsPerStrip"] = int(slots_per_strip)
+        if strip_spec is not None:
+            record["stripSpec"] = normalize_strip_spec(strip_spec)
+        else:
+            record["stripSpec"] = legacy_strip_spec(design, physical=physical,
+                                                   frame_count=slots_per_strip)
         return self._write_custom(record)
 
     def duplicate(self, template_id: str, name: str | None = None) -> dict[str, Any]:
@@ -148,6 +155,7 @@ class TemplateService:
                 # rewriting any asset path or changing the source files.
                 record["sourcePath"] = str(path.resolve())
                 record["assetRoot"] = str(path.parent.resolve())
+                record["stripSpec"] = self._strip_spec_for_record(record)
                 records.append(record)
             except (OSError, ValueError, TypeError):
                 # A malformed optional built-in is ignored so one bad asset
@@ -175,6 +183,7 @@ class TemplateService:
                 record["builtIn"] = False
                 record["readOnly"] = False
                 record.pop("sourcePath", None)
+                record["stripSpec"] = self._strip_spec_for_record(record)
                 records.append(record)
             except (OSError, ValueError, TypeError):
                 continue
@@ -210,8 +219,16 @@ class TemplateService:
         output["updatedAt"] = utc_timestamp()
         output.pop("sourcePath", None)
         output.pop("assetRoot", None)
+        output["stripSpec"] = self._strip_spec_for_record(output)
         atomic_write_json(destination, output)
         return copy.deepcopy(output)
+
+    @staticmethod
+    def _strip_spec_for_record(record: Mapping[str, Any]) -> dict[str, Any]:
+        if isinstance(record.get("stripSpec"), Mapping):
+            return normalize_strip_spec(record["stripSpec"])
+        return legacy_strip_spec(record.get("design"), physical=record.get("physical"),
+                                 frame_count=record.get("slotsPerStrip"))
 
     @staticmethod
     def _version(record: Mapping[str, Any]) -> int:

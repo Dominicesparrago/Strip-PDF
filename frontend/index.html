@@ -19,6 +19,7 @@
   <svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true">
     <defs>
       <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M3.5 17.5 9 12.5l4 3.5 3.5-3 4 4"/></symbol>
+      <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 6.5V5h14v1.5"/><path d="M12 5v14"/><path d="M8.5 19h7"/></symbol>
       <symbol id="i-designer" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 7.5h6M9 11h6"/><rect x="9" y="14" width="6" height="4" rx="1"/></symbol>
       <symbol id="i-print" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><rect x="6" y="8.5" width="3" height="7" rx="0.5"/><rect x="10.5" y="8.5" width="3" height="7" rx="0.5"/><rect x="15" y="8.5" width="3" height="7" rx="0.5"/></symbol>
       <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 2.5h8L19 7.5v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2Z"/><path d="M13.5 2.5v5h5"/></symbol>
@@ -45,6 +46,7 @@
       <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
       <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></symbol>
       <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6"/></symbol>
+      <symbol id="i-chev-up" viewBox="0 0 24 24"><path d="m6 14.5 6-6 6 6"/></symbol>
       <symbol id="i-close" viewBox="0 0 24 24"><path d="M5.5 5.5l13 13M18.5 5.5l-13 13"/></symbol>
       <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2.5h8.4A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5v-12Z"/></symbol>
       <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M7.5 3v5h7V3M7.5 21v-7h9v7"/></symbol>
@@ -61,6 +63,12 @@
       <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.34 5.66"/><path d="M4 20v-4.5h4.5"/></symbol>
       <symbol id="i-rename" viewBox="0 0 24 24"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5Z"/><path d="m13.5 6.5 4 4"/></symbol>
       <symbol id="i-crop-reset" viewBox="0 0 24 24"><path d="M6.5 2.5v13a2 2 0 0 0 2 2h13"/><path d="M2.5 6.5h13a2 2 0 0 1 2 2v13"/></symbol>
+      <symbol id="i-align-left" viewBox="0 0 24 24"><path d="M4.5 3v18"/><rect x="7.5" y="7" width="12" height="10" rx="1.5"/></symbol>
+      <symbol id="i-align-center-h" viewBox="0 0 24 24"><path d="M12 3v18"/><rect x="5" y="7" width="14" height="10" rx="1.5"/></symbol>
+      <symbol id="i-align-right" viewBox="0 0 24 24"><path d="M19.5 3v18"/><rect x="4.5" y="7" width="12" height="10" rx="1.5"/></symbol>
+      <symbol id="i-align-top" viewBox="0 0 24 24"><path d="M3 4.5h18"/><rect x="7" y="7.5" width="10" height="12" rx="1.5"/></symbol>
+      <symbol id="i-align-center-v" viewBox="0 0 24 24"><path d="M3 12h18"/><rect x="7" y="5" width="10" height="14" rx="1.5"/></symbol>
+      <symbol id="i-align-bottom" viewBox="0 0 24 24"><path d="M3 19.5h18"/><rect x="7" y="4.5" width="10" height="12" rx="1.5"/></symbol>
     </defs>
   </svg>
 
@@ -86,24 +94,28 @@
 
       <nav class="rail-nav" aria-label="Workspaces">
         <span class="rail-section-label">Workflow</span>
-        <button type="button" class="rail-item is-active" data-nav="images">
+        <button type="button" class="rail-item is-active" data-nav="images" data-workflow-step="images" aria-current="page">
           <svg class="icon"><use href="#i-image"/></svg>
           <span class="rail-item-label">Photos</span>
+          <span class="rail-item-state" data-rail-state="images" aria-hidden="true"></span>
           <span class="rail-item-num" aria-hidden="true">1</span>
         </button>
-        <button type="button" class="rail-item" data-nav="designer">
+        <button type="button" class="rail-item" data-nav="designer" data-workflow-step="designer">
           <svg class="icon"><use href="#i-designer"/></svg>
           <span class="rail-item-label">Designer</span>
+          <span class="rail-item-state" data-rail-state="designer" aria-hidden="true"></span>
           <span class="rail-item-num" aria-hidden="true">2</span>
         </button>
-        <button type="button" class="rail-item" data-nav="print">
+        <button type="button" class="rail-item" data-nav="print" data-workflow-step="print">
           <svg class="icon"><use href="#i-print"/></svg>
           <span class="rail-item-label">Print Layout</span>
+          <span class="rail-item-state" data-rail-state="print" aria-hidden="true"></span>
           <span class="rail-item-num" aria-hidden="true">3</span>
         </button>
-        <button type="button" class="rail-item" data-nav="preview">
+        <button type="button" class="rail-item" data-nav="preview" data-workflow-step="preview">
           <svg class="icon"><use href="#i-file"/></svg>
           <span class="rail-item-label">PDF Preview</span>
+          <span class="rail-item-state" data-rail-state="preview" aria-hidden="true"></span>
           <span class="rail-item-num" aria-hidden="true">4</span>
         </button>
 
@@ -133,10 +145,11 @@
       <h1 class="topbar-title" data-topbar-title>Photos</h1>
       <span class="topbar-divider" aria-hidden="true"></span>
 
-      <span class="project-chip" data-tooltip="Current project">
+      <span class="project-chip" data-tooltip="Current project" data-project-chip>
         <svg class="icon"><use href="#i-folder"/></svg>
         <span class="project-chip-name" data-bind="project-name">Untitled Project</span>
         <span class="project-chip-dot" aria-hidden="true"></span>
+        <span class="project-chip-state" data-project-state aria-live="off">Unsaved</span>
       </span>
 
       <span class="topbar-spacer"></span>
@@ -174,25 +187,32 @@
         <div class="ws ws-main-right">
           <!-- Image library -->
           <section class="card">
-            <header class="card-head">
-              <div class="grow">
-                <div class="card-title">Image Library</div>
-                <div class="card-sub">Import, review, and order your photos</div>
+            <header class="card-head library-toolbar">
+              <div class="library-toolbar-row">
+                <div class="grow">
+                  <div class="card-title">Image Library</div>
+                  <div class="card-sub">Import, review, and order your photos</div>
+                </div>
+                <span class="count-chip"><b data-bind="image-count">0</b> images</span>
               </div>
-              <span class="count-chip"><b data-bind="image-count">0</b> images</span>
-              <span class="topbar-divider" aria-hidden="true"></span>
-              <div class="segmented" role="group" aria-label="Sort images" data-segmented="sort">
-                <button type="button" data-vaction="sort:smart" class="is-active" data-tooltip="Smart sort">Smart</button>
-                <button type="button" data-vaction="sort:number" data-tooltip="By photo number">123</button>
-                <button type="button" data-vaction="sort:name_asc" data-tooltip="Filename A–Z">A–Z</button>
-                <button type="button" data-vaction="sort:name_desc" data-tooltip="Filename Z–A">Z–A</button>
-                <button type="button" data-vaction="sort:date" data-tooltip="File date">Date</button>
-                <button type="button" data-vaction="sort:manual" data-tooltip="Manual order">Manual</button>
+              <div class="library-toolbar-row">
+                <div class="library-sort" role="group" aria-label="Sort images">
+                  <span class="library-sort-label"><svg class="icon"><use href="#i-sort"/></svg>Sort</span>
+                  <div class="segmented" data-segmented="sort">
+                    <button type="button" data-vaction="sort:smart" class="is-active" data-tooltip="Smart sort">Smart</button>
+                    <button type="button" data-vaction="sort:number" data-tooltip="By photo number">123</button>
+                    <button type="button" data-vaction="sort:name_asc" data-tooltip="Filename A–Z">A–Z</button>
+                    <button type="button" data-vaction="sort:name_desc" data-tooltip="Filename Z–A">Z–A</button>
+                    <button type="button" data-vaction="sort:date" data-tooltip="File date">Date</button>
+                    <button type="button" data-vaction="sort:manual" data-tooltip="Manual order">Manual</button>
+                  </div>
+                </div>
+                <span class="topbar-spacer"></span>
+                <button type="button" class="btn btn-primary" data-action="import-images">
+                  <svg class="icon"><use href="#i-import"/></svg>
+                  Import Images
+                </button>
               </div>
-              <button type="button" class="btn btn-primary" data-action="import-images">
-                <svg class="icon"><use href="#i-import"/></svg>
-                Import Images
-              </button>
             </header>
 
             <div class="card-body card-body--flush library-stage">
@@ -211,10 +231,10 @@
                   <svg class="icon"><use href="#i-import"/></svg>
                   Select Images
                 </button>
-                <div class="empty-foot">JPG · PNG · WebP — imported photos stay on your disk</div>
+                <div class="empty-foot">JPG · PNG · WebP — photos stay on this computer</div>
               </div>
 
-              <ol data-bind="image-list" class="image-grid" aria-live="polite"></ol>
+              <ol data-bind="image-list" class="image-list-root" aria-live="polite"></ol>
             </div>
 
             <footer class="card-foot library-foot">
@@ -226,10 +246,10 @@
           <!-- Strip groups -->
           <aside class="ws-panel stack-3">
             <section class="card" data-panel="strip-groups" id="strip-groups" aria-labelledby="strips-title">
-              <h2 id="strips-title" class="visually-hidden">Strip groups</h2>
+              <h2 id="strips-title" class="visually-hidden">Strip setup</h2>
               <header class="card-head">
                 <div class="grow">
-                  <div class="card-title">Strips</div>
+                  <div class="card-title">Strip Setup</div>
                   <div class="card-sub">Group photos into printable strips</div>
                 </div>
               </header>
@@ -247,13 +267,19 @@
                     <option value="exclude">Exclude incomplete strip</option>
                   </select>
                 </div>
-                <button type="button" class="btn btn-primary" data-action="generate-strips">
+                <button type="button" class="btn btn-primary" data-action="generate-strips" data-primary-generate>
                   <svg class="icon"><use href="#i-strip"/></svg>
                   Generate Strips
                 </button>
-                <p class="result-note">
+              </div>
+            </section>
+
+            <section class="card card--quiet" data-panel="strip-status">
+              <div class="card-body stack-2">
+                <div class="group-label">Status</div>
+                <p class="strip-status-line">
                   <span class="count-chip"><b data-bind="strip-count">0</b> strips</span>
-                  <span class="text-faint">ready for the Designer</span>
+                  <span class="strip-status-hint" data-strip-status-hint>none generated yet</span>
                 </p>
               </div>
             </section>
@@ -270,11 +296,11 @@
               </div>
             </section>
 
-            <section class="card card--quiet next-step-card">
+            <section class="card card--quiet next-step-card" data-next-step="photos">
               <div class="card-body stack-2">
                 <div class="group-label">Next step</div>
-                <p class="text-muted">Style the strip background, frames, and pattern in the Designer.</p>
-                <button type="button" class="btn btn-soft btn-sm" data-vaction="nav:designer">
+                <p class="text-muted" data-next-step-message>Import photos to get started.</p>
+                <button type="button" class="btn btn-soft btn-sm" data-next-step-button>
                   Open Designer
                   <svg class="icon"><use href="#i-chev-right"/></svg>
                 </button>
@@ -334,6 +360,55 @@
                 <span>Snap</span>
               </label>
               <span class="topbar-spacer"></span>
+
+              <span class="selection-chip" data-selection-chip data-status="none">
+                <svg class="icon"><use href="#i-layers" data-selection-icon/></svg>
+                <span class="selection-chip-label" data-selection-label>Nothing selected</span>
+              </span>
+
+              <span class="strip-indicator" data-strip-indicator hidden>
+                <svg class="icon"><use href="#i-strip"/></svg>
+                <span data-strip-indicator-label>Strip 1 of 1</span>
+              </span>
+
+              <div class="menu-anchor">
+                <button type="button" class="btn btn-ghost btn-icon" id="design-add-trigger" data-vaction="add-menu" data-tooltip="Add element">
+                  <svg class="icon"><use href="#i-plus"/></svg>
+                </button>
+                <div class="menu-pop" id="design-add-menu" role="menu" aria-label="Add design element">
+                  <button type="button" class="menu-item" role="menuitem" data-action="element-add" data-element-type="text">
+                    <svg class="icon"><use href="#i-text"/></svg>
+                    <span><span class="menu-item-title">Text</span>
+                    <span class="menu-item-sub">Styled caption or title</span></span>
+                  </button>
+                  <button type="button" class="menu-item" role="menuitem" data-action="element-add-decoration">
+                    <svg class="icon"><use href="#i-snap"/></svg>
+                    <span><span class="menu-item-title">Decoration</span>
+                    <span class="menu-item-sub">Moveable accent block</span></span>
+                  </button>
+                  <button type="button" class="menu-item" role="menuitem" data-action="element-add-pattern">
+                    <svg class="icon"><use href="#i-templates"/></svg>
+                    <span><span class="menu-item-title">Pattern</span>
+                    <span class="menu-item-sub">Dots · lines · grid layer</span></span>
+                  </button>
+                  <button type="button" class="menu-item" role="menuitem" data-action="element-add" data-element-type="shape">
+                    <svg class="icon"><use href="#i-designer"/></svg>
+                    <span><span class="menu-item-title">Shape</span>
+                    <span class="menu-item-sub">Colored rectangle</span></span>
+                  </button>
+                  <button type="button" class="menu-item" role="menuitem" data-action="element-add" data-element-type="accent">
+                    <svg class="icon"><use href="#i-plus"/></svg>
+                    <span><span class="menu-item-title">Accent</span>
+                    <span class="menu-item-sub">Small highlight shape</span></span>
+                  </button>
+                  <button type="button" class="menu-item" role="menuitem" data-action="element-add" data-element-type="border">
+                    <svg class="icon"><use href="#i-strip"/></svg>
+                    <span><span class="menu-item-title">Border</span>
+                    <span class="menu-item-sub">Framing element</span></span>
+                  </button>
+                </div>
+              </div>
+
               <div class="topbar-group">
                 <button type="button" class="btn btn-ghost btn-icon" data-vaction="zoom-out" data-tooltip="Zoom out">
                   <svg class="icon"><use href="#i-zoom-out"/></svg>
@@ -348,14 +423,20 @@
             </div>
 
             <div class="stage" data-panel="designer-canvas-container">
-              <canvas data-bind="designer-canvas" width="600" height="800" aria-label="Strip design canvas"></canvas>
+              <div class="canvas-content">
+                <canvas data-bind="designer-canvas" width="600" height="1800" aria-label="Strip design canvas"></canvas>
+                <div class="designer-overlay" id="designer-overlay" aria-hidden="true">
+                  <div class="overlay-guide is-x" data-guide="x" hidden></div>
+                  <div class="overlay-guide is-y" data-guide="y" hidden></div>
+                </div>
+              </div>
             </div>
 
             <div class="stage-status">
               <span class="print-size-chip" data-print-size data-tooltip="Physical print body — fixed, not affected by zoom">
                 <svg class="icon"><use href="#i-lock"/></svg>
                 <span class="print-size-label">Print Size</span>
-                <b data-print-size-value>54.0 × 72.0 mm</b>
+                <b data-print-size-value>2 × 6 in · 50.8 × 152.4 mm</b>
                 <span class="print-size-lock">Locked</span>
               </span>
               <span class="topbar-spacer"></span>
@@ -403,17 +484,111 @@
                   <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-duplicate" data-tooltip="Duplicate element">
                     <svg class="icon"><use href="#i-copy"/></svg>
                   </button>
+                  <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-reset" data-tooltip="Reset element to template defaults">
+                    <svg class="icon"><use href="#i-reset"/></svg>
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-delete" data-tooltip="Delete element">
+                    <svg class="icon"><use href="#i-trash"/></svg>
+                  </button>
                 </div>
               </header>
 
               <div class="card-body stack-3">
+                <div class="text-body-section" data-text-only>
+                  <span class="field-label">Text</span>
+                  <textarea data-bind="text-content" rows="3" placeholder="Type the text to display" spellcheck="false"></textarea>
+                  <div class="text-color-row">
+                    <span class="field-label">Color</span>
+                    <span class="color-cell"><input data-bind="text-color" type="color" value="#000000"></span>
+                  </div>
+                </div>
+
+                <div class="inspector-section" data-section="typography" data-text-only>
+                  <div class="group-label">Typography</div>
+                  <div class="text-row">
+                    <div class="field">
+                      <span class="field-label">Font family</span>
+                      <select data-bind="text-font-family">
+                        <option value="Arial">Arial</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Courier New">Courier New</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <span class="field-label">Size</span>
+                      <input data-bind="text-font-size" type="number" min="4" step="1">
+                    </div>
+                    <div class="field">
+                      <span class="field-label">Weight</span>
+                      <select data-bind="text-font-weight">
+                        <option value="400">Regular</option>
+                        <option value="600">Semibold</option>
+                        <option value="700">Bold</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="inspector-section" data-section="text-alignment" data-text-only>
+                  <div class="group-label">Alignment</div>
+                  <div class="text-align-row" role="group" aria-label="Text alignment">
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-text-align="left" aria-pressed="false" data-tooltip="Align text left">
+                      <svg class="icon"><use href="#i-align-left"/></svg>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-text-align="center" aria-pressed="false" data-tooltip="Align text center">
+                      <svg class="icon"><use href="#i-align-center-h"/></svg>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-text-align="right" aria-pressed="false" data-tooltip="Align text right">
+                      <svg class="icon"><use href="#i-align-right"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="inspector-section" data-section="text-spacing" data-text-only>
+                  <div class="group-label">Spacing</div>
+                  <div class="prop-grid prop-grid-2">
+                    <div class="field"><span class="field-label">Letter spacing</span><input data-bind="text-letter-spacing" type="number" step="0.5"></div>
+                    <div class="field"><span class="field-label">Line height</span><input data-bind="text-line-height" type="number" min="0.5" step="0.05"></div>
+                  </div>
+                </div>
+
                 <div class="inspector-section" data-section="transform">
-                  <div class="group-label">Transform</div>
+                  <div class="group-label">Frame</div>
+                  <div class="field-label" data-frame-lock-note></div>
+                  <button type="button" class="btn btn-sm" data-action="frame-unlock" hidden>Unlock Frame Layout</button>
                   <div class="prop-grid prop-grid-2">
                     <div class="field"><span class="field-label">X</span><input data-bind="element-x" type="number" step="1"></div>
                     <div class="field"><span class="field-label">Y</span><input data-bind="element-y" type="number" step="1"></div>
                     <div class="field"><span class="field-label">Width</span><input data-bind="element-width" type="number" min="0" step="1"></div>
                     <div class="field"><span class="field-label">Height</span><input data-bind="element-height" type="number" min="0" step="1"></div>
+                  </div>
+                  <label class="toggle-label toggle-sm" data-tooltip="Keep width and height proportional">
+                    <input data-action="design-aspect-lock" type="checkbox" checked>
+                    <span>Lock aspect ratio</span>
+                  </label>
+                </div>
+
+                <div class="inspector-section" data-section="align">
+                  <div class="group-label">Align to artboard</div>
+                  <div class="align-row">
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-align" data-alignment="left" data-tooltip="Align left">
+                      <svg class="icon"><use href="#i-align-left"/></svg>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-align" data-alignment="horizontal-center" data-tooltip="Align horizontal center">
+                      <svg class="icon"><use href="#i-align-center-h"/></svg>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-align" data-alignment="right" data-tooltip="Align right">
+                      <svg class="icon"><use href="#i-align-right"/></svg>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-align" data-alignment="top" data-tooltip="Align top">
+                      <svg class="icon"><use href="#i-align-top"/></svg>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-align" data-alignment="vertical-center" data-tooltip="Align vertical center">
+                      <svg class="icon"><use href="#i-align-center-v"/></svg>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-icon-sm" data-action="element-align" data-alignment="bottom" data-tooltip="Align bottom">
+                      <svg class="icon"><use href="#i-align-bottom"/></svg>
+                    </button>
                   </div>
                 </div>
 
@@ -423,12 +598,31 @@
                     <div class="field field-color"><span class="field-label">Fill</span><span class="color-cell"><input data-bind="element-fill" type="color" value="#ffffff"></span></div>
                     <div class="field field-color"><span class="field-label">Border</span><span class="color-cell"><input data-bind="element-border-color" type="color" value="#000000"></span></div>
                     <div class="field"><span class="field-label">Border width</span><input data-bind="element-border-width" type="number" min="0" step="1"></div>
+                    <div class="field"><span class="field-label">Corner radius</span><input data-bind="element-border-radius" type="number" min="0" step="1"></div>
                     <div class="field field-slider"><span class="field-label">Opacity</span><input data-bind="element-opacity" type="range" min="0" max="1" step="0.01"></div>
                   </div>
                 </div>
 
                 <div class="inspector-section" data-section="image">
-                  <div class="group-label">Image</div>
+                  <div class="group-label">Photo</div>
+                  <div class="crop-mode-row" role="group" aria-label="Photo fit">
+                    <button type="button" class="btn btn-sm" data-action="crop-fill" data-crop-mode="cover" aria-pressed="true">Fill</button>
+                    <button type="button" class="btn btn-sm" data-action="crop-fit" data-crop-mode="contain" aria-pressed="false">Fit</button>
+                  </div>
+                  <div class="field-label">Drag the photo to adjust its position. Scroll over it to zoom.</div>
+                  <div class="field field-slider">
+                    <span class="field-label">Zoom</span>
+                    <input data-bind="crop-zoom" type="range" min="1" max="4" step="0.01" value="1">
+                  </div>
+                  <div class="crop-action-row">
+                    <button type="button" class="btn btn-sm" data-action="crop-center">Center</button>
+                    <button type="button" class="btn btn-sm" data-action="crop-reset">
+                      <svg class="icon"><use href="#i-crop-reset"/></svg>
+                      Reset crop
+                    </button>
+                  </div>
+                  <details class="inspector-advanced">
+                    <summary>Advanced</summary>
                   <div class="prop-grid prop-grid-2">
                     <div class="field">
                       <span class="field-label">Ratio</span>
@@ -447,14 +641,7 @@
                       </select>
                     </div>
                   </div>
-                  <div class="field field-slider">
-                    <span class="field-label">Crop zoom</span>
-                    <input data-bind="crop-zoom" type="range" min="1" max="3" step="0.01" value="1">
-                  </div>
-                  <button type="button" class="btn btn-sm" data-action="crop-reset">
-                    <svg class="icon"><use href="#i-crop-reset"/></svg>
-                    Reset crop
-                  </button>
+                  </details>
                 </div>
 
                 <div class="inspector-section" data-section="pattern">
@@ -480,6 +667,20 @@
                     <input data-bind="pattern-opacity" type="range" min="0" max="1" step="0.01">
                   </div>
                 </div>
+
+                <div class="applyall-bar" data-applyall hidden>
+                  <div class="applyall-scope">
+                    <svg class="icon"><use href="#i-strip"/></svg>
+                    <span>Scope: current strip</span>
+                    <span class="topbar-spacer"></span>
+                    <span class="applyall-count" data-applyall-count></span>
+                  </div>
+                  <button type="button" class="btn btn-soft" data-action="design-apply-all" data-applyall-button>
+                    <svg class="icon"><use href="#i-copy"/></svg>
+                    Apply to All Strips
+                  </button>
+                  <p class="applyall-result" data-bind="apply-all-status" data-applyall-result role="status" aria-live="polite"></p>
+                </div>
               </div>
             </fieldset>
           </aside>
@@ -488,7 +689,7 @@
 
       <!-- ================================================ VIEW: Print Layout (3) -->
       <section class="view" data-view="print" data-panel="print-layout" id="print-layout" aria-labelledby="print-title">
-        <h2 id="print-title" class="visually-hidden">A4 landscape print layout</h2>
+        <h2 id="print-title" class="visually-hidden">A4 print layout</h2>
 
         <div class="ws ws-split-3 print-grid">
           <!-- Left: page setup -->
@@ -497,17 +698,33 @@
               <header class="card-head">
                 <div class="grow">
                   <div class="card-title">Page Setup</div>
-                  <div class="card-sub">A4 landscape · 297 × 210 mm</div>
+                  <div class="card-sub" data-print-page-size>A4 landscape · 297 × 210 mm</div>
                 </div>
               </header>
               <div class="card-body stack-3">
                 <div class="field">
-                  <span class="field-label">Strips per page</span>
-                  <input data-bind="strips-per-page" type="number" min="1" max="20">
+                  <span class="field-label">Print size</span>
+                  <select data-bind="strip-preset" aria-label="Physical strip preset">
+                    <option value="photobooth-2x6">Photobooth 2 × 6 in</option>
+                    <option value="photobooth-54x180">Photobooth 54 × 180 mm</option>
+                    <option value="custom">Custom size</option>
+                  </select>
                 </div>
-                <div class="prop-grid prop-grid-2">
+                <div class="prop-grid prop-grid-2" data-custom-print-size hidden>
                   <div class="field"><span class="field-label">Strip width <small>(mm)</small></span><input data-bind="strip-width-mm" type="number" min="1" step="0.1"></div>
                   <div class="field"><span class="field-label">Strip height <small>(mm)</small></span><input data-bind="strip-height-mm" type="number" min="1" step="0.1"></div>
+                </div>
+                <div class="prop-grid prop-grid-2">
+                  <div class="field"><span class="field-label">Paper</span><input type="text" value="A4" readonly aria-label="Paper size A4"></div>
+                  <div class="field"><span class="field-label">Orientation</span><select data-bind="paper-orientation"><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></div>
+                </div>
+                <div class="field">
+                  <span class="field-label">Copies per page</span>
+                  <select data-bind="copies-mode"><option value="auto">Auto</option><option value="manual">Manual</option></select>
+                </div>
+                <div class="field" data-manual-copies hidden>
+                  <span class="field-label">Requested copies</span>
+                  <input data-bind="strips-per-page" type="number" min="1" max="100" value="5">
                 </div>
                 <div class="prop-grid prop-grid-2">
                   <div class="field"><span class="field-label">Page margin <small>(mm)</small></span><input data-bind="page-margin-mm" type="number" min="0" step="0.1"></div>
@@ -529,10 +746,10 @@
                 <div class="group-label">Print body</div>
                 <span class="print-size-chip" data-print-size data-tooltip="Physical strip size — set here and in the Designer">
                   <svg class="icon"><use href="#i-lock"/></svg>
-                  <b data-print-size-value>54.0 × 72.0 mm</b>
+                  <b data-print-size-value>2 × 6 in · 50.8 × 152.4 mm</b>
                   <span class="print-size-lock">Locked</span>
                 </span>
-                <p class="text-faint">Physical strip dimensions never scale to fit the page — reduce the count or size instead.</p>
+                <p class="text-faint">Each strip keeps this physical size on the page and in the PDF.</p>
               </div>
             </section>
           </aside>
@@ -570,6 +787,7 @@
                     <p class="fit-status-msg" data-bind="fit-message" role="status"></p>
                   </div>
                 </div>
+                <button type="button" class="btn btn-sm" data-action="use-max-copies" hidden>Use maximum safe count</button>
                 <button type="button" class="btn btn-sm reveal-toggle" data-vaction="fit-details" aria-expanded="false">
                   <svg class="icon"><use href="#i-chev-down"/></svg>
                   Details
@@ -580,11 +798,11 @@
               </div>
             </section>
 
-            <section class="card card--quiet">
+            <section class="card card--quiet next-step-card" data-next-step="print">
               <div class="card-body stack-2">
                 <div class="group-label">Next step</div>
-                <p class="text-muted">Review the rendered pages, then export a print-ready PDF.</p>
-                <button type="button" class="btn btn-soft btn-sm" data-vaction="nav:preview">
+                <p class="text-muted" data-next-step-message>Validate the layout, then review the PDF preview.</p>
+                <button type="button" class="btn btn-soft btn-sm" data-next-step-button>
                   Open PDF Preview
                   <svg class="icon"><use href="#i-chev-right"/></svg>
                 </button>
@@ -616,6 +834,8 @@
                   <svg class="icon"><use href="#i-zoom-out"/></svg>
                 </button>
                 <button type="button" class="btn btn-sm is-active" data-vaction="pz-fit">Fit Page</button>
+                <button type="button" class="btn btn-sm" data-vaction="pz-width">Fit Width</button>
+                <button type="button" class="btn btn-sm" data-vaction="pz-actual" data-tooltip="Screen size estimate at 96 CSS pixels per inch">Actual Size</button>
                 <button type="button" class="btn btn-sm" data-vaction="pz-100">100%</button>
                 <button type="button" class="btn btn-ghost btn-icon" data-vaction="pz-in" data-tooltip="Zoom in">
                   <svg class="icon"><use href="#i-zoom-in"/></svg>
@@ -812,7 +1032,7 @@
             </header>
             <div class="card-body stack-2">
               <p class="text-muted">Your work autosaves for recovery after an unexpected close. Projects, custom templates, and thumbnails are stored under your local user data directory.</p>
-              <p class="text-faint">The built-in <b>DCapture Clean</b> template reproduces the DCapture 1200 × 1600 result body (warm off-white, four photo areas) as editable design data; its physical size is a configurable assumption.</p>
+              <p class="text-faint">The built-in <b>DCapture Clean</b> template uses the photobooth 2 × 6 in strip: 600 × 1800 logical units, four fixed photo frames, and a 50.8 × 152.4 mm print body.</p>
             </div>
           </section>
         </div>
@@ -840,6 +1060,30 @@
   <!-- ------------------------------------------------------ Toasts -->
   <div class="toasts" data-panel="toasts" aria-live="polite"></div>
 
+  <!-- ------------------------------------------- Screen-reader announcements -->
+  <div class="visually-hidden" aria-live="polite" role="status" data-live-region></div>
+
+  <!-- ====================================================== Dialog host -->
+  <div class="dialog-root" data-dialog-root hidden>
+    <div class="dialog-backdrop" data-dialog-backdrop></div>
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="studio-dialog-title" aria-describedby="studio-dialog-text" data-dialog>
+      <div class="dialog-icon" data-dialog-icon aria-hidden="true"></div>
+      <h2 class="dialog-title" id="studio-dialog-title" data-dialog-title>—</h2>
+      <p class="dialog-text" id="studio-dialog-text" data-dialog-text>—</p>
+      <div class="dialog-detail" data-dialog-detail hidden></div>
+      <div class="dialog-input-wrap" data-dialog-input-wrap hidden>
+        <label class="field-label" id="studio-dialog-input-label" for="studio-dialog-input" data-dialog-input-label></label>
+        <input id="studio-dialog-input" type="text" data-dialog-input autocomplete="off">
+        <p id="studio-dialog-error" data-dialog-error role="alert" hidden></p>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-dialog-action="cancel">Cancel</button>
+        <button type="button" class="btn" data-dialog-action="secondary">—</button>
+        <button type="button" class="btn btn-primary" data-dialog-action="primary">—</button>
+      </div>
+    </section>
+  </div>
+
   <!-- ------------------------------------------------------ Parked originals
        Functional selects kept out of sight; presentation controls mirror them
        and forward value changes. Do not remove — app.js binds these hooks. -->
@@ -858,6 +1102,11 @@
       <option value="dark">Dark</option>
     </select>
     <select data-bind="design-element-list" tabindex="-1"></select>
+    <select data-bind="text-align" tabindex="-1" aria-label="Text alignment">
+      <option value="left">Left</option>
+      <option value="center">Center</option>
+      <option value="right">Right</option>
+    </select>
   </div>
 
 </body>

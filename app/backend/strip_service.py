@@ -13,7 +13,7 @@ INCOMPLETE_POLICIES = {"empty", "duplicate_last", "repeat_from_start", "exclude"
 CROP_MODES = {"cover", "contain"}
 CROP_RATIOS = {"1:1", "4:3", "16:9", "original"}
 DEFAULT_TEMPLATE_ID = "dcapture-clean"
-DEFAULT_CROP = {"mode": "cover", "ratio": "original", "zoom": 1.0, "offsetX": 0.0, "offsetY": 0.0}
+DEFAULT_CROP = {"mode": "contain", "ratio": "original", "zoom": 1.0, "offsetX": 0.0, "offsetY": 0.0}
 
 
 def _image_id(image: Mapping | str) -> str:
@@ -93,9 +93,12 @@ def generate_strips(
 
         slots = [{"imageId": image_id, "crop": dict(DEFAULT_CROP)} for image_id in group]
         strip_id = _strip_id(template_id, slots_per_strip, strip_index, slots)
+        previous = prior_by_id.get(strip_id)
         for slot_index, slot in enumerate(slots):
             slot["crop"] = _previous_crop(prior_by_id, strip_id, slot_index, slot["imageId"])
-        strips.append({"id": strip_id, "slots": slots, "templateId": template_id, "designOverride": None})
+        override = previous.get("designOverride") if previous and isinstance(previous.get("designOverride"), Mapping) else None
+        strips.append({"id": strip_id, "slots": slots, "templateId": template_id,
+                       "designOverride": copy.deepcopy(override) if override else None})
 
     incomplete_image_ids = image_ids[complete_count * slots_per_strip :] if remainder else []
     excluded_image_ids = incomplete_image_ids if incomplete == "exclude" else []

@@ -9,7 +9,9 @@ import uuid
 from pathlib import Path
 from typing import Any, Mapping
 
+from .models import DEFAULT_PRINT_SETTINGS
 from .persistence import atomic_write_json, read_json_object, unwrap_document, utc_timestamp, versioned_document
+from .strip_geometry import default_strip_spec
 
 
 PROJECT_SCHEMA_VERSION = 1
@@ -35,16 +37,10 @@ def _default_project(name: str = "Untitled Project") -> dict[str, Any]:
         "grouping": {"slotsPerStrip": 4, "incomplete": "empty"},
         "strips": [],
         "selectedTemplateId": "dcapture-clean",
+        "stripSpec": default_strip_spec(),
         "templateOverrides": {},
         "design": None,
-        "printSettings": {
-            "paper": "A4",
-            "orientation": "landscape",
-            "stripsPerPage": 5,
-            "marginMm": 5.0,
-            "gapMm": 2.0,
-            "cutGuides": False,
-        },
+        "printSettings": copy.deepcopy(DEFAULT_PRINT_SETTINGS),
         "pdfSettings": {"resolutionDpi": 300},
         "themeMode": "system",
     }

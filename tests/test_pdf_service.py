@@ -82,6 +82,40 @@ class PdfServiceTests(unittest.TestCase):
             self.assertAlmostEqual(float(image_matrix.group(1)), 54 * 72 / 25.4, places=3)
             self.assertAlmostEqual(float(image_matrix.group(2)), 72 * 72 / 25.4, places=3)
 
+    @unittest.skipUnless(importlib.util.find_spec("reportlab") and importlib.util.find_spec("PIL"), "ReportLab and Pillow are application dependencies")
+    def test_default_two_by_six_raster_is_144_by_432_points(self) -> None:
+        from PIL import Image
+
+        layout = calculate_layout({}, 1)
+        self.assertEqual((layout["pages"][0]["placements"][0]["widthMm"],
+                          layout["pages"][0]["placements"][0]["heightMm"]), (50.8, 152.4))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            asset = root / "two-by-six.png"
+            Image.new("RGB", (144, 432), "white").save(asset)
+            target = root / "two-by-six.pdf"
+            result = write_pdf(layout, [{"id": "1", "renderPath": str(asset)}], target)
+            self.assertTrue(result["ok"], result)
+            document = target.read_bytes()
+            page = next(obj for obj in re.finditer(rb"\d+\s+\d+\s+obj(.*?)endobj", document, re.S)
+                        if re.search(rb"/Type\s*/Page\b", obj.group(1)))
+            content_id = re.search(rb"/Contents\s+(\d+)\s+\d+\s+R", page.group(1)).group(1)
+            content = re.search(rb"\b" + content_id + rb"\s+\d+\s+obj(.*?)stream\r?\n(.*?)endstream",
+                                document, re.S)
+            self.assertIsNotNone(content)
+            filters, stream = content.group(1), content.group(2).rstrip(b"\r\n")
+            if b"/ASCII85Decode" in filters:
+                stream = base64.a85decode(stream, adobe=True)
+            if b"/FlateDecode" in filters:
+                stream = zlib.decompress(stream)
+            image_matrix = re.search(
+                rb"([\d.]+)\s+0\s+0\s+([\d.]+)\s+[\d.]+\s+[\d.]+\s+cm\s+/FormXob\.[^\s]+\s+Do",
+                stream,
+            )
+            self.assertIsNotNone(image_matrix)
+            self.assertAlmostEqual(float(image_matrix.group(1)), 144, places=3)
+            self.assertAlmostEqual(float(image_matrix.group(2)), 432, places=3)
+
     def test_preview_returns_dependency_error_or_uses_shared_page_geometry(self) -> None:
         layout = calculate_layout({}, 1)
         result = render_preview_png(layout, [{"id": "1", "blank": True}], dpi=96)
@@ -105,7 +139,7 @@ class PdfServiceTests(unittest.TestCase):
         self.assertEqual(fit["status"], "ERROR")
         self.assertEqual(fit["detail"]["requestedCount"], 6)
         self.assertEqual(fit["detail"]["maximumCount"], 5)
-        self.assertGreater(fit["detail"]["overflowMm"], 0)
+        self.assertGreater(fit["detail"]["verticalOverflowMm"], 0)
 
     def test_validation_flags_low_resolution_and_unresolved_images(self) -> None:
         settings = {"stripsPerPage": 1}
